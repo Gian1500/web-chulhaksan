@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum UserStatus {
+  ACTIVE
+  PENDING
+  BLOCKED
+}
+
+enum RequestStatus {
+  PENDING_TEACHER
+  PENDING_STUDENT
+  ACCEPTED
+  REJECTED
+}
+
+enum RequestCreatedBy {
+  STUDENT
+  TEACHER
+}
+
+enum FeeStatus {
+  PENDING
+  PAID
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String     @id @default(uuid())
+  dni          String     @unique
+  passwordHash String
+  role         UserRole
+  status       UserStatus @default(PENDING)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  teacher         Teacher?
+  student         Student?
+  createdRequests StudentTeacherRequest[] @relation("RequestCreatedByUser")
+}
+
+model Teacher {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  firstName String
+  lastName  String
+  phone     String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User                       @relation(fields: [userId], references: [id])
+  assignments StudentTeacherAssignment[]
+  requests    StudentTeacherRequest[]
+}
+
+model Student {
+  dni       String   @id
+  userId    String   @unique
+  firstName String
+  lastName  String
+  birthDate DateTime?
+  phone     String?
+  email     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User                       @relation(fields: [userId], references: [id])
+  assignments StudentTeacherAssignment[]
+  requests    StudentTeacherRequest[]
+  fees        MonthlyFee[]
+  attendance  Attendance[]
+}
+
+model StudentTeacherRequest {
+  id              String            @id @default(uuid())
+  studentDni      String
+  teacherId       String
+  status          RequestStatus     @default(PENDING_TEACHER)
+  createdByRole   RequestCreatedBy
+  createdByUserId String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  student       Student @relation(fields: [studentDni], references: [dni])
+  teacher       Teacher @relation(fields: [teacherId], references: [id])
+  createdByUser User    @relation("RequestCreatedByUser", fields: [createdByUserId], references: [id])
+
+  @@index([studentDni])
+  @@index([teacherId])
+  @@index([status])
+}
+
+model StudentTeacherAssignment {
+  id         String   @id @default(uuid())
+  studentDni String
+  teacherId  String
+  startAt    DateTime @default(now())
+  endAt      DateTime?
+  active     Boolean  @default(true)
+
+  student Student @relation(fields: [studentDni], references: [dni])
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+
+  @@index([studentDni])
+  @@index([teacherId])
+  @@index([active])
+}
+
+model GlobalFeeSetting {
+  id            String   @id @default(uuid())
+  monthlyAmount Decimal  @db.Decimal(10, 2)
+  currency      String   @default("ARS")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model MonthlyFee {
+  id         String   @id @default(uuid())
+  studentDni String
+  month      Int
+  year       Int
+  amount     Decimal   @db.Decimal(10, 2)
+  status     FeeStatus @default(PENDING)
+  dueDate    DateTime
+  createdAt  DateTime  @default(now())
+  paidAt     DateTime?
+
+  student  Student   @relation(fields: [studentDni], references: [dni])
+  payments Payment[]
+
+  @@unique([studentDni, year, month])
+  @@index([studentDni])
+  @@index([status])
+}
+
+model Payment {
+  id          String        @id @default(uuid())
+  feeId       String
+  mpPreferenceId String?    @unique
+  mpPaymentId String?       @unique
+  status      PaymentStatus @default(PENDING)
+  paidAt      DateTime?
+  rawResponse Json?
+  createdAt   DateTime      @default(now())
+
+  fee MonthlyFee @relation(fields: [feeId], references: [id])
+
+  @@index([feeId])
+  @@index([status])
+}
+
+model Attendance {
+  id         String   @id @default(uuid())
+  studentDni String
+  date       DateTime
+  present    Boolean
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  student Student @relation(fields: [studentDni], references: [dni])
+
+  @@unique([studentDni, date])
+  @@index([studentDni])
+}

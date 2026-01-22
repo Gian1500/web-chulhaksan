@@ -1,0 +1,410 @@
+﻿{
+  "info": {
+    "name": "Proyecto-Lau API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "authToken", "value": "" },
+    { "key": "dni", "value": "30123456" },
+    { "key": "teacherId", "value": "" },
+    { "key": "feeId", "value": "" },
+    { "key": "requestId", "value": "" },
+    { "key": "adminUserId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /auth/register (student)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"30123456\",\n  \"password\": \"ClaveSegura1!\",\n  \"firstName\": \"Juan\",\n  \"lastName\": \"Perez\",\n  \"email\": \"juan@mail.com\",\n  \"phone\": \"+541160000000\",\n  \"birthDate\": \"1999-05-15\",\n  \"address\": \"Av. Siempre Viva 123\",\n  \"role\": \"STUDENT\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/register (teacher)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"30999888\",\n  \"password\": \"ClaveSegura1!\",\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Martinez\",\n  \"email\": \"ana@mail.com\",\n  \"phone\": \"+541160000001\",\n  \"role\": \"TEACHER\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{dni}}\",\n  \"password\": \"ClaveSegura1!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.accessToken) {",
+                  "  pm.collectionVariables.set('authToken', json.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /auth/me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/auth/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "item": [
+        {
+          "name": "GET /students/me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/students/me"
+          }
+        },
+        {
+          "name": "GET /students/:dni",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/students/{{dni}}"
+          }
+        },
+        {
+          "name": "PATCH /students/:dni",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/students/{{dni}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nuevo@mail.com\",\n  \"phone\": \"+541160000002\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Teachers",
+      "item": [
+        {
+          "name": "GET /teachers/me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/teachers/me"
+          }
+        },
+        {
+          "name": "GET /teachers/me/students",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/teachers/me/students"
+          }
+        },
+        {
+          "name": "GET /teachers/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/teachers/{{teacherId}}"
+          }
+        },
+        {
+          "name": "PATCH /teachers/me",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/teachers/me",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+541160000003\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assignments",
+      "item": [
+        {
+          "name": "POST /assignments/request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/assignments/request",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentDni\": \"{{dni}}\",\n  \"teacherId\": \"{{teacherId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /assignments/requests",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/assignments/requests"
+          }
+        },
+        {
+          "name": "POST /assignments/:id/approve",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/assignments/{{requestId}}/approve"
+          }
+        },
+        {
+          "name": "POST /assignments/:id/reject",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/assignments/{{requestId}}/reject"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fees",
+      "item": [
+        {
+          "name": "GET /fees/me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/fees/me"
+          }
+        },
+        {
+          "name": "GET /fees/student/:dni",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/fees/student/{{dni}}"
+          }
+        },
+        {
+          "name": "POST /fees/generate",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/fees/generate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"month\": 7,\n  \"year\": 2024\n}"
+            }
+          }
+        },
+        {
+          "name": "PATCH /fees/:id/mark-paid",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/fees/{{feeId}}/mark-paid"
+          }
+        },
+        {
+          "name": "GET /fees/settings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/fees/settings"
+          }
+        },
+        {
+          "name": "PATCH /fees/settings",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/fees/settings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"monthlyAmount\": \"7500\",\n  \"currency\": \"ARS\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "POST /payments/create",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/payments/create",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"feeId\": \"{{feeId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /payments/:feeId/qr",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/payments/{{feeId}}/qr"
+          }
+        },
+        {
+          "name": "POST /payments/webhook",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/payments/webhook",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"payment\",\n  \"data\": { \"id\": \"123\" }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "item": [
+        {
+          "name": "POST /attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/attendance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentDni\": \"{{dni}}\",\n  \"date\": \"2024-07-10\",\n  \"present\": true,\n  \"notes\": \"Clase técnica\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /attendance/student/:dni",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/attendance/student/{{dni}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "GET /admin/users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/admin/users"
+          }
+        },
+        {
+          "name": "POST /admin/users",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/admin/users",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"30111222\",\n  \"password\": \"ClaveSegura1!\",\n  \"role\": \"TEACHER\",\n  \"firstName\": \"Diego\",\n  \"lastName\": \"Silva\",\n  \"email\": \"diego@mail.com\",\n  \"phone\": \"+541160000004\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PATCH /admin/users/:id/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/admin/users/{{adminUserId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /admin/students",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/admin/students"
+          }
+        },
+        {
+          "name": "GET /admin/teachers",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/admin/teachers"
+          }
+        }
+      ]
+    }
+  ]
+}
