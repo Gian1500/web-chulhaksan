@@ -1,6 +1,121 @@
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { apiBaseUrl, getApiHeaders, getToken } from './auth';
+
+type PaymentDetails = {
+  id: string;
+  status: string;
+  paidAt?: string | null;
+  createdAt: string;
+  mpPaymentId?: string | null;
+  paymentMethod?: {
+    id?: string | null;
+    name?: string | null;
+    type?: string | null;
+    last4?: string | null;
+  } | null;
+  fee: {
+    month: number;
+    year: number;
+    amount: string;
+    student: {
+      dni: string;
+      firstName: string;
+      lastName: string;
+    } | null;
+  };
+};
+
+const monthNames = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
 
 export function PaymentReceiptSuccess() {
+  const [params] = useSearchParams();
+  const externalRef = params.get('external_reference');
+  const [payment, setPayment] = useState<PaymentDetails | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      setError('Iniciá sesión para ver el comprobante.');
+      setLoading(false);
+      return;
+    }
+    if (!externalRef) {
+      setError('No se encontró el pago.');
+      setLoading(false);
+      return;
+    }
+
+    const loadPayment = async () => {
+      try {
+        const response = await fetch(`${apiBaseUrl}/payments/${externalRef}`, {
+          headers: getApiHeaders({ token }),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.message ?? 'No se pudo cargar el comprobante.');
+        }
+        const data = (await response.json()) as PaymentDetails;
+        setPayment(data);
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'No se pudo cargar el comprobante.';
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPayment();
+  }, [externalRef]);
+
+  const studentName = useMemo(() => {
+    if (!payment?.fee.student) return 'Alumno';
+    return `${payment.fee.student.firstName} ${payment.fee.student.lastName}`;
+  }, [payment]);
+
+  const monthLabel = useMemo(() => {
+    if (!payment) return '';
+    return `${monthNames[payment.fee.month - 1] ?? 'Mes'} ${payment.fee.year}`;
+  }, [payment]);
+
+  const dateLabel = useMemo(() => {
+    if (!payment) return '-';
+    const dateValue = payment.paidAt ?? payment.createdAt;
+    if (!dateValue) return '-';
+    return new Date(dateValue).toLocaleString('es-AR');
+  }, [payment]);
+
+  const methodLabel = useMemo(() => {
+    if (!payment?.paymentMethod) return '-';
+    if (payment.paymentMethod.type === 'account_money') {
+      return 'Saldo en cuenta';
+    }
+    return payment.paymentMethod.name ?? payment.paymentMethod.id ?? '-';
+  }, [payment]);
+
+  const methodDetail = useMemo(() => {
+    if (!payment?.paymentMethod?.last4) return '';
+    return `•••• ${payment.paymentMethod.last4}`;
+  }, [payment]);
+
   return (
     <div className="bg-background-light min-h-screen flex flex-col items-center">
       <div className="w-full max-w-[430px] min-h-screen flex flex-col shadow-2xl bg-background-light overflow-hidden">
@@ -41,22 +156,32 @@ export function PaymentReceiptSuccess() {
                   Monto Pagado
                 </p>
                 <h1 className="text-background-dark text-4xl font-bold">
-                  $45.000
+                  {payment
+                    ? `$${Number(payment.fee.amount).toLocaleString('es-AR')}`
+                    : '--'}
                 </h1>
               </div>
+              {loading && (
+                <p className="text-sm text-gray-500 text-center">
+                  Cargando comprobante...
+                </p>
+              )}
+              {error && (
+                <p className="text-sm text-red-600 text-center">{error}</p>
+              )}
               <div className="space-y-4">
                 <div className="flex justify-between items-center gap-x-6">
                   <p className="text-neutral-500 text-sm font-medium">
                     Estudiante
                   </p>
                   <p className="text-background-dark text-sm font-semibold text-right">
-                    Juan Pérez
+                    {studentName}
                   </p>
                 </div>
                 <div className="flex justify-between items-center gap-x-6">
                   <p className="text-neutral-500 text-sm font-medium">DNI</p>
                   <p className="text-background-dark text-sm font-semibold text-right">
-                    12.345.678
+                    {payment?.fee.student?.dni ?? '-'}
                   </p>
                 </div>
                 <div className="flex justify-between items-center gap-x-6">
@@ -64,7 +189,7 @@ export function PaymentReceiptSuccess() {
                     Mes Pagado
                   </p>
                   <p className="text-background-dark text-sm font-semibold text-right">
-                    Junio 2024
+                    {monthLabel || '-'}
                   </p>
                 </div>
                 <div className="flex justify-between items-center gap-x-6 pt-2">
@@ -72,7 +197,7 @@ export function PaymentReceiptSuccess() {
                     ID de Transacción
                   </p>
                   <p className="text-background-dark text-sm font-mono text-right">
-                    #TKD-99283
+                    {payment?.mpPaymentId ?? payment?.id ?? '-'}
                   </p>
                 </div>
                 <div className="flex justify-between items-center gap-x-6">
@@ -80,7 +205,7 @@ export function PaymentReceiptSuccess() {
                     Fecha y Hora
                   </p>
                   <p className="text-background-dark text-sm font-semibold text-right">
-                    24/05/2024 14:30
+                    {dateLabel}
                   </p>
                 </div>
                 <div className="flex justify-between items-center gap-x-6">
@@ -90,7 +215,7 @@ export function PaymentReceiptSuccess() {
                       credit_card
                     </span>
                     <p className="text-background-dark text-sm font-semibold text-right">
-                      VISA •••• 4242
+                      {methodLabel} {methodDetail}
                     </p>
                   </div>
                 </div>

@@ -24,6 +24,13 @@ export class PaymentsController {
     return this.paymentsService.createQrForFee(req['user'], feeId);
   }
 
+  @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT, UserRole.TEACHER, UserRole.ADMIN)
+  getById(@Req() req: Request, @Param('id') id: string) {
+    return this.paymentsService.getPaymentDetails(req['user'], id);
+  }
+
   @Post('webhook')
   webhook(@Body() body: any) {
     return this.paymentsService.handleWebhook(body);

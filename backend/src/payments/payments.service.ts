@@ -1,9 +1,10 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { FeeStatus, PaymentStatus, UserRole } from '@prisma/client';
+import { FeeStatus, PaymentStatus, Prisma, UserRole } from '@prisma/client';
 import { MercadoPagoConfig, Payment, Preference } from 'mercadopago';
 import QRCode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
@@ -49,18 +50,31 @@ export class PaymentsService {
     });
 
     const preference = new Preference(this.mpClient);
-    const backUrlsConfig = {
-      success: process.env.MP_BACK_URL_SUCCESS,
-      failure: process.env.MP_BACK_URL_FAILURE,
-      pending: process.env.MP_BACK_URL_PENDING,
+    const rawSuccess = process.env.MP_BACK_URL_SUCCESS?.trim();
+    const rawFailure = process.env.MP_BACK_URL_FAILURE?.trim();
+    const rawPending = process.env.MP_BACK_URL_PENDING?.trim();
+    const isValidUrl = (value?: string) => {
+      if (!value) return false;
+      try {
+        new URL(value);
+        return true;
+      } catch {
+        return false;
+      }
     };
-    const backUrls = Object.values(backUrlsConfig).every(Boolean)
-      ? backUrlsConfig
-      : undefined;
+    const backUrlsConfig = {
+      success: isValidUrl(rawSuccess) ? rawSuccess : undefined,
+      failure: isValidUrl(rawFailure) ? rawFailure : undefined,
+      pending: isValidUrl(rawPending) ? rawPending : undefined,
+    };
+    const backUrls = backUrlsConfig.success ? backUrlsConfig : undefined;
+    const canAutoReturn =
+      !!backUrlsConfig.success &&
+      backUrlsConfig.success.startsWith('https://') &&
+      !backUrlsConfig.success.includes('localhost');
     const notificationUrl = process.env.MP_WEBHOOK_URL;
 
-    const response = await preference.create({
-      body: {
+    const preferenceBody = {
         items: [
           {
             id: fee.id,
@@ -73,20 +87,25 @@ export class PaymentsService {
         payer: fee.student?.email ? { email: fee.student.email } : undefined,
         back_urls: backUrls,
         notification_url: notificationUrl,
-        auto_return: 'approved',
+        ...(canAutoReturn ? { auto_return: 'approved' } : {}),
         external_reference: payment.id,
         metadata: {
           feeId: fee.id,
           studentDni: fee.studentDni,
         },
-      },
+      };
+
+    const response = await preference.create({
+      body: preferenceBody,
     });
+
+    const rawResponse = JSON.parse(JSON.stringify(response)) as Prisma.InputJsonValue;
 
     await this.prisma.payment.update({
       where: { id: payment.id },
       data: {
         mpPreferenceId: response.id,
-        rawResponse: response,
+        rawResponse,
       },
     });
 
@@ -105,6 +124,53 @@ export class PaymentsService {
       paymentId: payment.paymentId,
       mpPreferenceId: payment.mpPreferenceId,
       qrDataUrl: dataUrl,
+    };
+  }
+
+  async getPaymentDetails(user: any, paymentId: string) {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        fee: {
+          include: { student: true },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw new NotFoundException('Pago no encontrado.');
+    }
+
+    if (
+      user.role === UserRole.STUDENT &&
+      payment.fee.studentDni !== user.dni
+    ) {
+      throw new ForbiddenException('No tienes permisos para este pago.');
+    }
+
+    const paymentMethod = this.extractPaymentMethod(payment.rawResponse);
+
+    return {
+      id: payment.id,
+      status: payment.status,
+      paidAt: payment.paidAt,
+      createdAt: payment.createdAt,
+      mpPaymentId: payment.mpPaymentId,
+      mpPreferenceId: payment.mpPreferenceId,
+      paymentMethod,
+      fee: {
+        id: payment.fee.id,
+        month: payment.fee.month,
+        year: payment.fee.year,
+        amount: payment.fee.amount,
+        student: payment.fee.student
+          ? {
+              dni: payment.fee.student.dni,
+              firstName: payment.fee.student.firstName,
+              lastName: payment.fee.student.lastName,
+            }
+          : null,
+      },
     };
   }
 
@@ -186,5 +252,28 @@ export class PaymentsService {
       return PaymentStatus.REJECTED;
     }
     return PaymentStatus.PENDING;
+  }
+
+  private extractPaymentMethod(raw: unknown) {
+    if (!raw || typeof raw !== 'object') {
+      return null;
+    }
+    const data = raw as Record<string, any>;
+    const paymentMethod = data.payment_method ?? null;
+    const card = data.card ?? null;
+
+    const methodId =
+      data.payment_method_id ?? paymentMethod?.id ?? paymentMethod?.name ?? null;
+    const methodName =
+      paymentMethod?.name ?? data.payment_method_id ?? null;
+    const methodType = data.payment_type_id ?? null;
+    const last4 = card?.last_four_digits ?? null;
+
+    return {
+      id: methodId,
+      name: methodName,
+      type: methodType,
+      last4,
+    };
   }
 }

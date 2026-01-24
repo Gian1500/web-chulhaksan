@@ -1,6 +1,105 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { apiBaseUrl, getApiHeaders, getToken } from './auth';
+
+type FeeItem = {
+  id: string;
+  month: number;
+  year: number;
+  amount: string;
+  status: 'PENDING' | 'PAID';
+  dueDate: string;
+  paidAt?: string | null;
+};
+
+const monthNames = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
 
 export function Payments() {
+  const [fees, setFees] = useState<FeeItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const pendingCount = useMemo(
+    () => fees.filter((fee) => fee.status === 'PENDING').length,
+    [fees],
+  );
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      setError('Iniciá sesión para ver tus cuotas.');
+      setLoading(false);
+      return;
+    }
+
+    const loadFees = async () => {
+      try {
+        const response = await fetch(`${apiBaseUrl}/fees/me`, {
+          headers: getApiHeaders({ token }),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.message ?? 'No se pudieron cargar las cuotas.');
+        }
+        const data = (await response.json()) as FeeItem[];
+        setFees(data ?? []);
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'No se pudieron cargar las cuotas.';
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFees();
+  }, []);
+
+  const handlePay = async (feeId: string) => {
+    const token = getToken();
+    if (!token) {
+      setError('Iniciá sesión para continuar.');
+      return;
+    }
+    setError('');
+    try {
+      const response = await fetch(`${apiBaseUrl}/payments/create`, {
+        method: 'POST',
+        headers: getApiHeaders({ token, json: true }),
+        body: JSON.stringify({ feeId }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message ?? 'No se pudo iniciar el pago.');
+      }
+      const data = (await response.json()) as { initPoint?: string };
+      if (data?.initPoint) {
+        window.location.href = data.initPoint;
+      } else {
+        throw new Error('No se recibió el link de pago.');
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'No se pudo iniciar el pago.';
+      setError(message);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background-light text-[#1b0d0d]">
       <header className="sticky top-0 z-50 bg-background-light/80 backdrop-blur-md border-b border-gray-200">
@@ -40,7 +139,7 @@ export function Payments() {
               <div className="mt-2 flex items-center gap-1.5">
                 <span className="size-2 rounded-full bg-orange-500 animate-pulse" />
                 <p className="text-orange-600 text-xs font-semibold">
-                  1 Cuota Pendiente
+                  {pendingCount} Cuota{pendingCount === 1 ? '' : 's'} Pendiente
                 </p>
               </div>
             </div>
@@ -48,106 +147,106 @@ export function Payments() {
         </section>
 
         <div className="px-4 flex justify-between items-end">
-          <h3 className="text-lg font-bold leading-tight">Cuotas 2024</h3>
-          <span className="text-xs text-gray-500 font-medium">Ciclo Actual</span>
+          <h3 className="text-lg font-bold leading-tight">Cuotas</h3>
+          <span className="text-xs text-gray-500 font-medium">
+            Ciclo Actual
+          </span>
         </div>
 
         <div className="mt-4 px-4 space-y-4">
-          <div className="bg-white rounded-xl p-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)] border-l-4 border-green-500">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3">
-                <div className="text-green-600 bg-green-100 flex items-center justify-center rounded-lg shrink-0 size-10">
-                  <span className="material-symbols-outlined">check_circle</span>
-                </div>
-                <div>
-                  <p className="text-base font-semibold">Junio 2024</p>
-                  <p className="text-xs text-gray-500">Pagado el 05/06/2024</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-base font-bold">$7.500</p>
-                <span className="text-[10px] uppercase font-bold text-green-600 tracking-wider">
-                  Acreditado
-                </span>
-              </div>
+          {loading && (
+            <div className="bg-white rounded-xl p-4 border border-gray-100 text-sm text-gray-600">
+              Cargando cuotas...
             </div>
-          </div>
+          )}
+          {error && (
+            <div className="bg-red-50 rounded-xl p-4 border border-red-200 text-sm text-red-600">
+              {error}
+            </div>
+          )}
+          {!loading && !error && fees.length === 0 && (
+            <div className="bg-white rounded-xl p-4 border border-gray-100 text-sm text-gray-600">
+              No hay cuotas registradas.
+            </div>
+          )}
+          {fees.map((fee) => {
+            const monthLabel = monthNames[fee.month - 1] ?? `Mes ${fee.month}`;
+            const paid = fee.status === 'PAID';
+            const paidLabel = fee.paidAt
+              ? new Date(fee.paidAt).toLocaleDateString('es-AR')
+              : 'Sin fecha';
+            const dueLabel = fee.dueDate
+              ? new Date(fee.dueDate).toLocaleDateString('es-AR')
+              : '-';
 
-          <div className="bg-white rounded-xl p-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)] border-l-4 border-primary">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="text-primary bg-primary/10 flex items-center justify-center rounded-lg shrink-0 size-10">
-                  <span className="material-symbols-outlined">schedule</span>
-                </div>
-                <div>
-                  <p className="text-base font-semibold">Julio 2024</p>
-                  <p className="text-xs text-primary font-medium">
-                    Venció el 10/07/2024
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-base font-bold">$7.500</p>
-                <span className="text-[10px] uppercase font-bold text-primary tracking-wider">
-                  Pendiente
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2 pt-2 border-t border-gray-100">
-              <Link
-                className="w-full bg-primary text-white py-2.5 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                to="/pagos/exito"
+            return (
+              <div
+                key={fee.id}
+                className={`bg-white rounded-xl p-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)] border-l-4 ${
+                  paid ? 'border-green-500' : 'border-primary'
+                }`}
               >
-                <span className="material-symbols-outlined text-lg">
-                  payments
-                </span>
-                Pagar con Mercado Pago
-              </Link>
-              <Link
-                className="w-full bg-white border border-primary text-primary py-2.5 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                to="/pagos/qr"
-              >
-                <span className="material-symbols-outlined text-lg">
-                  qr_code_2
-                </span>
-                Generar Código QR
-              </Link>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)] border-l-4 border-green-500">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="text-green-600 bg-green-100 flex items-center justify-center rounded-lg shrink-0 size-10">
-                  <span className="material-symbols-outlined">check_circle</span>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`${
+                        paid
+                          ? 'text-green-600 bg-green-100'
+                          : 'text-primary bg-primary/10'
+                      } flex items-center justify-center rounded-lg shrink-0 size-10`}
+                    >
+                      <span className="material-symbols-outlined">
+                        {paid ? 'check_circle' : 'schedule'}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold">
+                        {monthLabel} {fee.year}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {paid ? `Pagado el ${paidLabel}` : `Vence el ${dueLabel}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-base font-bold">
+                      ${Number(fee.amount).toLocaleString('es-AR')}
+                    </p>
+                    <span
+                      className={`text-[10px] uppercase font-bold tracking-wider ${
+                        paid ? 'text-green-600' : 'text-primary'
+                      }`}
+                    >
+                      {paid ? 'Acreditado' : 'Pendiente'}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-base font-semibold">Mayo 2024</p>
-                  <p className="text-xs text-gray-500">Pagado el 02/05/2024</p>
-                </div>
+                {!paid && (
+                  <div className="flex flex-col gap-2 pt-2 border-t border-gray-100">
+                    <button
+                      className="w-full bg-primary text-white py-2.5 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                      type="button"
+                      onClick={() => handlePay(fee.id)}
+                    >
+                      <span className="material-symbols-outlined text-lg">
+                        payments
+                      </span>
+                      Pagar con Mercado Pago
+                    </button>
+                    <Link
+                      className="w-full bg-white border border-primary text-primary py-2.5 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                      to={`/pagos/qr?feeId=${fee.id}`}
+                    >
+                      <span className="material-symbols-outlined text-lg">
+                        qr_code_2
+                      </span>
+                      Generar Código QR
+                    </Link>
+                  </div>
+                )}
               </div>
-              <div className="text-right">
-                <p className="text-base font-bold">$7.500</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)] border-l-4 border-green-500 opacity-80">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="text-green-600 bg-green-100 flex items-center justify-center rounded-lg shrink-0 size-10">
-                  <span className="material-symbols-outlined">check_circle</span>
-                </div>
-                <div>
-                  <p className="text-base font-semibold">Abril 2024</p>
-                  <p className="text-xs text-gray-500">Pagado el 08/04/2024</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-base font-bold">$7.500</p>
-              </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
 
         <section className="mt-8 px-4">

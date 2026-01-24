@@ -1,6 +1,34 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { fetchMe, login } from './auth';
 
 export function Login() {
+  const navigate = useNavigate();
+  const [dni, setDni] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const token = await login(dni.trim(), password);
+      await fetchMe(token);
+      navigate('/dashboard');
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'No se pudo iniciar sesión.';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light font-display antialiased">
       <div className="h-12 w-full" />
@@ -34,7 +62,7 @@ export function Login() {
           </p>
         </div>
 
-        <div className="w-full max-w-sm flex flex-col gap-5">
+        <form className="w-full max-w-sm flex flex-col gap-5" onSubmit={handleSubmit}>
           <div className="flex flex-col">
             <label className="flex flex-col w-full">
               <span className="text-[#1a1a2e] text-[12px] font-bold uppercase tracking-[0.05em] mb-2 ml-1 opacity-80">
@@ -49,6 +77,9 @@ export function Login() {
                   inputMode="numeric"
                   placeholder="Ej: 12.345.678"
                   type="text"
+                  value={dni}
+                  onChange={(event) => setDni(event.target.value)}
+                  required
                 />
               </div>
             </label>
@@ -67,6 +98,9 @@ export function Login() {
                   className="form-input flex w-full rounded-xl text-[#1a1a2e] border-slate-200 bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary h-[58px] placeholder:text-slate-300 pl-12 pr-12 text-base font-normal transition-all shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)]"
                   placeholder="••••••••"
                   type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
                 />
                 <button
                   className="absolute right-4 text-slate-400 hover:text-[#1a1a2e] transition-colors"
@@ -80,14 +114,21 @@ export function Login() {
             </label>
           </div>
 
-          <div className="mt-4">
-            <Link
-              className="w-full h-[58px] bg-primary text-white font-bold text-base rounded-xl shadow-lg shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-              to="/dashboard"
+          {error && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-2">
+            <button
+              className="w-full h-[58px] bg-primary text-white font-bold text-base rounded-xl shadow-lg shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+              type="submit"
+              disabled={loading}
             >
-              <span>Ingresar al Portal</span>
+              <span>{loading ? 'Ingresando...' : 'Ingresar al Portal'}</span>
               <span className="material-symbols-outlined text-xl">login</span>
-            </Link>
+            </button>
           </div>
 
           <div className="flex justify-center mt-2">
@@ -98,7 +139,7 @@ export function Login() {
               ¿Olvidó su contraseña?
             </Link>
           </div>
-        </div>
+        </form>
       </div>
 
       <div className="pb-10 pt-4 text-center">

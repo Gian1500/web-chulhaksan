@@ -1,6 +1,93 @@
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { apiBaseUrl, getApiHeaders, getToken } from './auth';
+
+type FeeItem = {
+  id: string;
+  month: number;
+  year: number;
+  amount: string;
+};
+
+const monthNames = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
 
 export function PaymentQr() {
+  const [params] = useSearchParams();
+  const feeId = params.get('feeId');
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [fee, setFee] = useState<FeeItem | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const monthLabel = useMemo(() => {
+    if (!fee) return '';
+    return `${monthNames[fee.month - 1] ?? `Mes ${fee.month}`} ${fee.year}`;
+  }, [fee]);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      setError('Iniciá sesión para generar el código QR.');
+      setLoading(false);
+      return;
+    }
+    if (!feeId) {
+      setError('No se encontró la cuota.');
+      setLoading(false);
+      return;
+    }
+
+    const loadQr = async () => {
+      try {
+        const [feesResponse, qrResponse] = await Promise.all([
+          fetch(`${apiBaseUrl}/fees/me`, {
+            headers: getApiHeaders({ token }),
+          }),
+          fetch(`${apiBaseUrl}/payments/${feeId}/qr`, {
+            headers: getApiHeaders({ token }),
+          }),
+        ]);
+
+        if (!feesResponse.ok) {
+          const body = await feesResponse.json().catch(() => ({}));
+          throw new Error(body.message ?? 'No se pudieron cargar las cuotas.');
+        }
+        if (!qrResponse.ok) {
+          const body = await qrResponse.json().catch(() => ({}));
+          throw new Error(body.message ?? 'No se pudo generar el QR.');
+        }
+
+        const fees = (await feesResponse.json()) as FeeItem[];
+        const data = await qrResponse.json();
+        const match = fees.find((item) => item.id === feeId) ?? null;
+
+        setFee(match);
+        setQrDataUrl(data?.qrDataUrl ?? '');
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'No se pudo generar el QR.';
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadQr();
+  }, [feeId]);
+
   return (
     <div className="bg-background-light min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-[420px] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
@@ -25,7 +112,7 @@ export function PaymentQr() {
 
         <div className="flex flex-col items-center py-6 px-4">
           <h3 className="text-[#1b0d0d] text-2xl font-bold leading-tight text-center pb-2">
-            Pago de Octubre
+            {monthLabel ? `Pago de ${monthLabel}` : 'Pago con QR'}
           </h3>
           <p className="text-[#1b0d0d]/70 text-base font-normal leading-normal pb-6 px-4 text-center">
             Escanea este código desde Mercado Pago para completar el pago de la
@@ -33,10 +120,19 @@ export function PaymentQr() {
           </p>
 
           <div className="w-full max-w-[280px] aspect-square bg-white p-4 rounded-xl shadow-inner border-2 border-primary/20 flex items-center justify-center">
-            <div
-              className="w-full h-full bg-center bg-no-repeat bg-contain"
-              style={{ backgroundImage: 'url("/assets/qr-placeholder.png")' }}
-            />
+            {loading && (
+              <div className="text-sm text-gray-500">Generando QR...</div>
+            )}
+            {!loading && error && (
+              <div className="text-sm text-red-600 text-center">{error}</div>
+            )}
+            {!loading && !error && qrDataUrl && (
+              <img
+                src={qrDataUrl}
+                alt="Código QR de pago"
+                className="w-full h-full object-contain"
+              />
+            )}
           </div>
 
           <div className="mt-8 w-full">
@@ -50,7 +146,7 @@ export function PaymentQr() {
                 </span>
               </div>
               <p className="text-primary text-4xl font-bold leading-tight">
-                $45.00
+                {fee ? `$${Number(fee.amount).toLocaleString('es-AR')}` : '--'}
               </p>
             </div>
           </div>
