@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { AuthProfile, UserRole } from './auth';
 import { apiBaseUrl, clearAuth, getApiHeaders, getProfile, getToken } from './auth';
@@ -9,9 +9,19 @@ const roleLabels: Record<UserRole, string> = {
   ADMIN: 'Admin',
 };
 
+type StudentSummary = {
+  dni: string;
+  firstName: string;
+  lastName: string;
+};
+
 export function Dashboard() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<AuthProfile | null>(getProfile());
+  const [displayName, setDisplayName] = useState('');
+  const [studentSummary, setStudentSummary] = useState<StudentSummary | null>(
+    null,
+  );
   const role = profile?.role ?? 'STUDENT';
   const [feeMessage, setFeeMessage] = useState('');
   const [feeLoading, setFeeLoading] = useState(false);
@@ -29,6 +39,61 @@ export function Dashboard() {
     setProfile(null);
     navigate('/login');
   };
+
+  useEffect(() => {
+    if (!profile) {
+      setDisplayName('');
+      setStudentSummary(null);
+      return;
+    }
+
+    const token = getToken();
+    if (!token) {
+      setDisplayName('');
+      setStudentSummary(null);
+      return;
+    }
+
+    const loadName = async () => {
+      try {
+        if (profile.role === 'STUDENT') {
+          const response = await fetch(`${apiBaseUrl}/students/me`, {
+            headers: getApiHeaders({ token }),
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setDisplayName(`${data.firstName ?? ''} ${data.lastName ?? ''}`.trim());
+            setStudentSummary({
+              dni: data.dni ?? '',
+              firstName: data.firstName ?? '',
+              lastName: data.lastName ?? '',
+            });
+            return;
+          }
+        }
+
+        if (profile.role === 'TEACHER') {
+          const response = await fetch(`${apiBaseUrl}/teachers/me`, {
+            headers: getApiHeaders({ token }),
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setDisplayName(`${data.firstName ?? ''} ${data.lastName ?? ''}`.trim());
+            return;
+          }
+        }
+
+        if (profile.role === 'ADMIN') {
+          setDisplayName('Administrador');
+        }
+      } catch {
+        setDisplayName('');
+        setStudentSummary(null);
+      }
+    };
+
+    loadName();
+  }, [profile]);
 
   const handleGenerateFees = async () => {
     const token = getToken();
@@ -127,14 +192,20 @@ export function Dashboard() {
       </header>
 
       <main className="max-w-md mx-auto p-4 pb-20 space-y-6">
-        <section className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+        <section className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
           <p className="text-xs uppercase tracking-[0.2em] text-primary font-bold">
             Perfil activo
           </p>
-          <div className="mt-3 flex items-center justify-between">
-            <div>
+          <div className="mt-4 flex items-center gap-4">
+            <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined">person</span>
+            </div>
+            <div className="flex-1">
               <p className="text-sm font-semibold">
                 {profile ? roleLabels[role] : 'Invitado'}
+              </p>
+              <p className="text-lg font-bold leading-tight">
+                {displayName || (profile ? 'Perfil sin nombre' : 'Inicia sesión')}
               </p>
               <p className="text-xs text-gray-500">
                 DNI: {profile?.dni ?? 'Sin sesión'}
@@ -150,6 +221,21 @@ export function Dashboard() {
 
         {role === 'STUDENT' && (
           <section className="space-y-4">
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+              <p className="text-xs uppercase tracking-[0.2em] text-primary font-bold">
+                Profesor actual
+              </p>
+              <div className="mt-3 flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <span className="material-symbols-outlined">sports_martial_arts</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Prof. Ana Martínez</p>
+                  <p className="text-xs text-gray-500">Asignado desde 2022</p>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
               <p className="text-sm font-bold">Acceso rápido</p>
               <div className="mt-4 grid grid-cols-2 gap-3">

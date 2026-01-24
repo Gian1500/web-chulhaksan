@@ -6,6 +6,7 @@ export function Login() {
   const navigate = useNavigate();
   const [dni, setDni] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -97,7 +98,7 @@ export function Login() {
                 <input
                   className="form-input flex w-full rounded-xl text-[#1a1a2e] border-slate-200 bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary h-[58px] placeholder:text-slate-300 pl-12 pr-12 text-base font-normal transition-all shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)]"
                   placeholder="••••••••"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   required
@@ -105,9 +106,13 @@ export function Login() {
                 <button
                   className="absolute right-4 text-slate-400 hover:text-[#1a1a2e] transition-colors"
                   type="button"
+                  aria-label={
+                    showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'
+                  }
+                  onClick={() => setShowPassword((prev) => !prev)}
                 >
                   <span className="material-symbols-outlined text-xl">
-                    visibility
+                    {showPassword ? 'visibility_off' : 'visibility'}
                   </span>
                 </button>
               </div>

@@ -1,6 +1,65 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { apiBaseUrl, getApiHeaders, getToken } from './auth';
+
+type StudentProfileData = {
+  dni: string;
+  firstName: string;
+  lastName: string;
+  birthDate?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+};
 
 export function StudentProfile() {
+  const [profile, setProfile] = useState<StudentProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      setError('Iniciá sesión para ver tu perfil.');
+      setLoading(false);
+      return;
+    }
+
+    const loadProfile = async () => {
+      try {
+        const response = await fetch(`${apiBaseUrl}/students/me`, {
+          headers: getApiHeaders({ token }),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.message ?? 'No se pudo cargar el perfil.');
+        }
+        const data = (await response.json()) as StudentProfileData;
+        setProfile(data);
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'No se pudo cargar el perfil.';
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
+
+  const fullName = useMemo(() => {
+    if (!profile) return 'Alumno';
+    return `${profile.firstName} ${profile.lastName}`;
+  }, [profile]);
+
+  const birthDateLabel = useMemo(() => {
+    if (!profile?.birthDate) return '-';
+    return new Date(profile.birthDate).toLocaleDateString('es-AR');
+  }, [profile]);
+
   return (
     <div className="min-h-screen bg-background-light text-[#1b0d0d]">
       <header className="sticky top-0 z-20 bg-background-light/80 backdrop-blur-md border-b border-gray-200">
@@ -27,11 +86,11 @@ export function StudentProfile() {
               className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-20 w-20 border-2 border-primary"
               style={{
                 backgroundImage:
-                  'url("https://lh3.googleusercontent.com/aida-public/AB6AXuAos5xQbdG0hopRVsTPpirAP0KbSkbwXsF01UGAMj1noMqHm6Vc45_Nq1nXZoQluBpRJRM_3x6J5l3qIiIjj4Kz3hzlnnggc9D3YIpjUGVE82iENCBnwKb_uutYZCpfaEnXcfE-HETPtNWEVy14tzaeDMlXVUtRSyIrkNZMZ6bQegcqEfUuRuhZ_WiJ4u3O6SFgkXkWoAPvIc9jlG0Gm0GkYpSVx-oIviQtjbdgYUF2JMkK9WdFcyjg7hr7ZKMnXz22eTiTHhatuixZ")',
+                  'url(\"https://lh3.googleusercontent.com/aida-public/AB6AXuAos5xQbdG0hopRVsTPpirAP0KbSkbwXsF01UGAMj1noMqHm6Vc45_Nq1nXZoQluBpRJRM_3x6J5l3qIiIjj4Kz3hzlnnggc9D3YIpjUGVE82iENCBnwKb_uutYZCpfaEnXcfE-HETPtNWEVy14tzaeDMlXVUtRSyIrkNZMZ6bQegcqEfUuRuhZ_WiJ4u3O6SFgkXkWoAPvIc9jlG0Gm0GkYpSVx-oIviQtjbdgYUF2JMkK9WdFcyjg7hr7ZKMnXz22eTiTHhatuixZ\")',
               }}
             />
             <div className="flex flex-col">
-              <p className="text-xl font-bold leading-tight">Juan Pérez</p>
+              <p className="text-xl font-bold leading-tight">{fullName}</p>
               <p className="text-gray-600 text-sm font-medium">
                 Cinturón Negro
               </p>
@@ -66,29 +125,41 @@ export function StudentProfile() {
               </p>
             </div>
             <div className="divide-y divide-gray-100">
+              {loading && (
+                <div className="px-4 py-3 text-sm text-gray-500">
+                  Cargando perfil...
+                </div>
+              )}
+              {error && (
+                <div className="px-4 py-3 text-sm text-red-600">{error}</div>
+              )}
               <div className="px-4 py-3 flex items-center justify-between">
                 <span className="text-sm text-gray-500">DNI</span>
-                <span className="text-sm font-semibold">30.123.456</span>
+                <span className="text-sm font-semibold">
+                  {profile?.dni ?? '-'}
+                </span>
               </div>
               <div className="px-4 py-3 flex items-center justify-between">
                 <span className="text-sm text-gray-500">Teléfono</span>
-                <span className="text-sm font-semibold">+54 11 6000 0000</span>
+                <span className="text-sm font-semibold">
+                  {profile?.phone ?? '-'}
+                </span>
               </div>
               <div className="px-4 py-3 flex items-center justify-between">
                 <span className="text-sm text-gray-500">Email</span>
                 <span className="text-sm font-semibold">
-                  juan@mail.com
+                  {profile?.email ?? '-'}
                 </span>
               </div>
               <div className="px-4 py-3 flex items-center justify-between">
                 <span className="text-sm text-gray-500">Dirección</span>
                 <span className="text-sm font-semibold">
-                  Av. Siempre Viva 123
+                  {profile?.address ?? '-'}
                 </span>
               </div>
               <div className="px-4 py-3 flex items-center justify-between">
                 <span className="text-sm text-gray-500">Nacimiento</span>
-                <span className="text-sm font-semibold">15/05/1999</span>
+                <span className="text-sm font-semibold">{birthDateLabel}</span>
               </div>
             </div>
           </div>
