@@ -6,10 +6,11 @@ type FeeItem = {
   id: string;
   month: number;
   year: number;
-  amount: string;
+  amount: string | number;
   status: 'PENDING' | 'PAID';
   dueDate: string;
   paidAt?: string | null;
+  lateFeeApplied?: boolean;
 };
 
 const monthNames = [
@@ -212,6 +213,11 @@ export function Payments() {
                     <p className="text-base font-bold">
                       ${Number(fee.amount).toLocaleString('es-AR')}
                     </p>
+                    {fee.lateFeeApplied && !paid && (
+                      <p className="text-[10px] text-primary mt-1">
+                        Incluye recargo por mora.
+                      </p>
+                    )}
                     <span
                       className={`text-[10px] uppercase font-bold tracking-wider ${
                         paid ? 'text-green-600' : 'text-primary'

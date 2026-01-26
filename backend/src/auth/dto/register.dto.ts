@@ -6,7 +6,6 @@ import {
   IsString,
   Length,
   Matches,
-  MinLength,
 } from 'class-validator';
 import { UserRole } from '@prisma/client';
 
@@ -17,11 +16,7 @@ export class RegisterDto {
   dni: string;
 
   @IsString()
-  @MinLength(8)
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/, {
-    message:
-      'La contraseña debe tener mayuscula, minuscula, numero y simbolo.',
-  })
+  @Length(6, 64)
   password: string;
 
   @IsString()
@@ -40,6 +35,16 @@ export class RegisterDto {
   @IsString()
   @Length(6, 30)
   phone?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(6, 30)
+  guardianPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(2, 80)
+  gym?: string;
 
   @IsOptional()
   @IsDateString()

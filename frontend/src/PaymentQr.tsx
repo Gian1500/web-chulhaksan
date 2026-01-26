@@ -6,7 +6,8 @@ type FeeItem = {
   id: string;
   month: number;
   year: number;
-  amount: string;
+  amount: string | number;
+  lateFeeApplied?: boolean;
 };
 
 const monthNames = [
@@ -148,6 +149,11 @@ export function PaymentQr() {
               <p className="text-primary text-4xl font-bold leading-tight">
                 {fee ? `$${Number(fee.amount).toLocaleString('es-AR')}` : '--'}
               </p>
+              {fee?.lateFeeApplied && (
+                <p className="text-xs text-primary mt-2">
+                  Incluye recargo por mora.
+                </p>
+              )}
             </div>
           </div>
 

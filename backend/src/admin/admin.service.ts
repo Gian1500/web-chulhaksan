@@ -5,6 +5,7 @@ import { ListUsersDto } from './dto/list-users.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UserRole, UserStatus } from '@prisma/client';
 import { hash } from 'bcryptjs';
+import { normalizeDni } from '../normalize';
 
 @Injectable()
 export class AdminService {
@@ -46,8 +47,9 @@ export class AdminService {
       throw new BadRequestException('No puedes crear admin desde aqui.');
     }
 
+    const normalizedDni = normalizeDni(dto.dni);
     const existing = await this.prisma.user.findUnique({
-      where: { dni: dto.dni },
+      where: { dni: normalizedDni },
       select: { id: true },
     });
     if (existing) {
@@ -59,7 +61,7 @@ export class AdminService {
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
-          dni: dto.dni,
+          dni: normalizedDni,
           passwordHash,
           role: dto.role,
           status: UserStatus.ACTIVE,
@@ -69,12 +71,14 @@ export class AdminService {
       if (dto.role === UserRole.STUDENT) {
         await tx.student.create({
           data: {
-            dni: dto.dni,
+            dni: normalizedDni,
             userId: user.id,
             firstName: dto.firstName,
             lastName: dto.lastName,
             email: dto.email,
             phone: dto.phone,
+            guardianPhone: dto.guardianPhone,
+            gym: dto.gym,
           },
         });
       }

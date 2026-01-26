@@ -5,6 +5,7 @@ import { RegisterDto } from './dto/register.dto';
 import { UserRole, UserStatus } from '@prisma/client';
 import { compare, hash } from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
+import { normalizeDni } from '../normalize';
 
 @Injectable()
 export class AuthService {
@@ -17,9 +18,7 @@ export class AuthService {
     if (dto.role === UserRole.ADMIN) {
       throw new BadRequestException('No puedes registrarte como admin.');
     }
-    if (dto.password === dto.dni) {
-      throw new BadRequestException('La contrasena no puede ser el DNI.');
-    }
+    const normalizedDni = normalizeDni(dto.dni);
     if (
       dto.role === UserRole.STUDENT &&
       (!dto.birthDate || !dto.address || !dto.email || !dto.phone)
@@ -35,7 +34,7 @@ export class AuthService {
     }
 
     const existing = await this.prisma.user.findUnique({
-      where: { dni: dto.dni },
+      where: { dni: normalizedDni },
       select: { id: true },
     });
     if (existing) {
@@ -47,7 +46,7 @@ export class AuthService {
     const user = await this.prisma.$transaction(async (tx) => {
       const createdUser = await tx.user.create({
         data: {
-          dni: dto.dni,
+          dni: normalizedDni,
           passwordHash,
           role: dto.role,
           status: UserStatus.ACTIVE,
@@ -57,12 +56,14 @@ export class AuthService {
       if (dto.role === UserRole.STUDENT) {
         await tx.student.create({
           data: {
-            dni: dto.dni,
+            dni: normalizedDni,
             userId: createdUser.id,
             firstName: dto.firstName,
             lastName: dto.lastName,
             email: dto.email,
             phone: dto.phone,
+            guardianPhone: dto.guardianPhone,
+            gym: dto.gym,
             birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
             address: dto.address,
           },
@@ -93,8 +94,9 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
+    const normalizedDni = normalizeDni(dto.dni);
     const user = await this.prisma.user.findUnique({
-      where: { dni: dto.dni },
+      where: { dni: normalizedDni },
     });
 
     if (!user) {

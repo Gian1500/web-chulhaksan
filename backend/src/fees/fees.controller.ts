@@ -20,8 +20,8 @@ export class FeesController {
 
   @Get('student/:dni')
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
-  listByStudent(@Param('dni') dni: string) {
-    return this.feesService.listFeesByStudent(dni);
+  listByStudent(@Req() req: Request, @Param('dni') dni: string) {
+    return this.feesService.listFeesByStudent(req['user'], dni);
   }
 
   @Post('generate')
@@ -33,7 +33,7 @@ export class FeesController {
   @Patch(':id/mark-paid')
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   markPaid(@Req() req: Request, @Param('id') id: string) {
-    return this.feesService.markFeePaid(id, req['user'].role);
+    return this.feesService.markFeePaid(id, req['user']);
   }
 
   @Get('settings')

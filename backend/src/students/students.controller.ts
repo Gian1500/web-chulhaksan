@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Patch, Req, UseGuards, Body } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -17,9 +17,18 @@ export class StudentsController {
     return this.studentsService.getByDni(req['user'].dni);
   }
 
+  @Get('me/teacher')
+  @Roles(UserRole.STUDENT)
+  getMyTeacher(@Req() req: Request) {
+    return this.studentsService.getTeacherSummary(req['user'].dni);
+  }
+
   @Get(':dni')
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
-  getByDni(@Param('dni') dni: string) {
+  getByDni(@Req() req: Request, @Param('dni') dni: string) {
+    if (req['user']?.role === UserRole.TEACHER) {
+      return this.studentsService.getByDniForTeacher(req['user'].sub, dni);
+    }
     return this.studentsService.getByDni(dni);
   }
 

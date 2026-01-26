@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -22,6 +23,7 @@ import { AdminModule } from './admin/admin.module';
         join(process.cwd(), 'backend', '.env'),
       ],
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     StudentsModule,

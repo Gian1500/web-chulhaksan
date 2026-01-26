@@ -12,19 +12,44 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 
 @Injectable()
 export class PaymentsService {
-  private readonly mpClient?: MercadoPagoConfig;
+  private readonly lateFeeAmount = new Prisma.Decimal(5000);
 
-  constructor(private readonly prisma: PrismaService) {
-    const accessToken = process.env.MP_ACCESS_TOKEN;
-    if (accessToken) {
-      this.mpClient = new MercadoPagoConfig({ accessToken });
+  constructor(private readonly prisma: PrismaService) {}
+
+  private getMpClient(accessToken: string) {
+    return new MercadoPagoConfig({ accessToken });
+  }
+
+  private applyLateFee(fee: { amount: Prisma.Decimal; dueDate: Date }, referenceDate?: Date) {
+    const reference = referenceDate ?? new Date();
+    const isLate = reference > fee.dueDate;
+    if (!isLate) return fee.amount;
+    return fee.amount.plus(this.lateFeeAmount);
+  }
+
+  private async getTeacherForFee(studentDni: string) {
+    const assignment = await this.prisma.studentTeacherAssignment.findFirst({
+      where: {
+        studentDni,
+        active: true,
+      },
+      include: { teacher: true },
+    });
+
+    if (!assignment?.teacher) {
+      throw new BadRequestException('El alumno no tiene profesor asignado.');
     }
+
+    if (!assignment.teacher.mpAccessToken) {
+      throw new BadRequestException(
+        'El profesor no tiene Mercado Pago conectado.',
+      );
+    }
+
+    return assignment.teacher;
   }
 
   async createPayment(user: any, dto: CreatePaymentDto) {
-    if (!this.mpClient) {
-      throw new BadRequestException('MP_ACCESS_TOKEN no configurado.');
-    }
     const fee = await this.prisma.monthlyFee.findUnique({
       where: { id: dto.feeId },
       include: { student: true },
@@ -42,6 +67,8 @@ export class PaymentsService {
       throw new BadRequestException('No tienes permisos para esta cuota.');
     }
 
+    const teacher = await this.getTeacherForFee(fee.studentDni);
+
     const payment = await this.prisma.payment.create({
       data: {
         feeId: dto.feeId,
@@ -49,7 +76,8 @@ export class PaymentsService {
       },
     });
 
-    const preference = new Preference(this.mpClient);
+    const mpClient = this.getMpClient(teacher.mpAccessToken);
+    const preference = new Preference(mpClient);
     const rawSuccess = process.env.MP_BACK_URL_SUCCESS?.trim();
     const rawFailure = process.env.MP_BACK_URL_FAILURE?.trim();
     const rawPending = process.env.MP_BACK_URL_PENDING?.trim();
@@ -73,6 +101,10 @@ export class PaymentsService {
       backUrlsConfig.success.startsWith('https://') &&
       !backUrlsConfig.success.includes('localhost');
     const notificationUrl = process.env.MP_WEBHOOK_URL;
+    const notificationWithTeacher = notificationUrl
+      ? `${notificationUrl}?teacherId=${teacher.id}`
+      : undefined;
+    const amount = this.applyLateFee(fee);
 
     const preferenceBody = {
         items: [
@@ -81,17 +113,18 @@ export class PaymentsService {
             title: `Cuota ${fee.month}/${fee.year}`,
             quantity: 1,
             currency_id: 'ARS',
-            unit_price: Number(fee.amount),
+            unit_price: Number(amount),
           },
         ],
         payer: fee.student?.email ? { email: fee.student.email } : undefined,
         back_urls: backUrls,
-        notification_url: notificationUrl,
+        notification_url: notificationWithTeacher,
         ...(canAutoReturn ? { auto_return: 'approved' } : {}),
         external_reference: payment.id,
         metadata: {
           feeId: fee.id,
           studentDni: fee.studentDni,
+          teacherId: teacher.id,
         },
       };
 
@@ -149,6 +182,11 @@ export class PaymentsService {
     }
 
     const paymentMethod = this.extractPaymentMethod(payment.rawResponse);
+    const displayAmount = this.applyLateFee(
+      payment.fee,
+      payment.paidAt ?? undefined,
+    );
+    const lateFeeApplied = displayAmount.toString() !== payment.fee.amount.toString();
 
     return {
       id: payment.id,
@@ -162,7 +200,8 @@ export class PaymentsService {
         id: payment.fee.id,
         month: payment.fee.month,
         year: payment.fee.year,
-        amount: payment.fee.amount,
+        amount: displayAmount,
+        lateFeeApplied,
         student: payment.fee.student
           ? {
               dni: payment.fee.student.dni,
@@ -175,6 +214,10 @@ export class PaymentsService {
   }
 
   async handleWebhook(payload: any) {
+    return this.handleWebhookWithTeacher(payload);
+  }
+
+  async handleWebhookWithTeacher(payload: any, teacherId?: string) {
     const direct = payload?.mpPaymentId && payload?.feeId && payload?.status;
     if (direct) {
       return this.upsertPaymentFromWebhook({
@@ -189,11 +232,18 @@ export class PaymentsService {
     if (!mpPaymentId) {
       throw new BadRequestException('Webhook invalido.');
     }
-
-    if (!this.mpClient) {
-      throw new BadRequestException('MP_ACCESS_TOKEN no configurado.');
+    const resolvedTeacherId = teacherId ?? payload?.teacherId ?? null;
+    if (!resolvedTeacherId) {
+      throw new BadRequestException('teacherId no proporcionado en el webhook.');
     }
-    const paymentClient = new Payment(this.mpClient);
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { id: resolvedTeacherId },
+      select: { mpAccessToken: true },
+    });
+    if (!teacher?.mpAccessToken) {
+      throw new BadRequestException('Mercado Pago del profesor no configurado.');
+    }
+    const paymentClient = new Payment(this.getMpClient(teacher.mpAccessToken));
     const mpPayment = await paymentClient.get({ id: mpPaymentId });
     const status = this.mapMpStatus(mpPayment.status);
     const feeId =

@@ -10,14 +10,7 @@ export function Home() {
             Chul Hak San
           </span>
         </div>
-        <Link
-          className="flex items-center justify-center rounded-full size-10 bg-transparent text-[#1b0d0d]"
-          to="/login"
-        >
-          <span className="material-symbols-outlined text-2xl">
-            account_circle
-          </span>
-        </Link>
+        <div className="size-10" />
       </header>
 
       <div className="@container">
@@ -40,6 +33,15 @@ export function Home() {
               <p className="text-white text-lg font-medium italic opacity-90 text-shadow-hero">
                 Una Filosofía de Vida
               </p>
+              <Link
+                className="mt-6 w-full max-w-[220px] bg-primary hover:bg-accent text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 group active:scale-[0.98]"
+                to="/login"
+              >
+                <span>Iniciar Sesion</span>
+                <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
+                  arrow_forward
+                </span>
+              </Link>
               <div className="w-20 h-[3px] bg-primary mt-5 rounded-full" />
               <p className="mt-4 text-[11px] uppercase tracking-[0.45em] text-white/70">
                 Disciplina · Respeto · Superación

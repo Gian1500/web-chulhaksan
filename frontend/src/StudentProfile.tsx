@@ -8,12 +8,21 @@ type StudentProfileData = {
   lastName: string;
   birthDate?: string | null;
   phone?: string | null;
+  guardianPhone?: string | null;
   email?: string | null;
+  gym?: string | null;
   address?: string | null;
+};
+
+type TeacherSummary = {
+  firstName: string;
+  lastName: string;
+  assignedAt?: string;
 };
 
 export function StudentProfile() {
   const [profile, setProfile] = useState<StudentProfileData | null>(null);
+  const [teacher, setTeacher] = useState<TeacherSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -36,6 +45,16 @@ export function StudentProfile() {
         }
         const data = (await response.json()) as StudentProfileData;
         setProfile(data);
+        const teacherResponse = await fetch(`${apiBaseUrl}/students/me/teacher`, {
+          headers: getApiHeaders({ token }),
+        });
+        if (teacherResponse.ok) {
+          const teacherData =
+            (await teacherResponse.json()) as TeacherSummary | null;
+          setTeacher(teacherData);
+        } else {
+          setTeacher(null);
+        }
       } catch (err) {
         const message =
           err instanceof Error
@@ -109,8 +128,12 @@ export function StudentProfile() {
                 <span className="material-symbols-outlined">sports_martial_arts</span>
               </div>
               <div>
-                <p className="text-sm font-semibold">Prof. Ana Martínez</p>
-                <p className="text-xs text-gray-500">Asignado desde 2022</p>
+                <p className="text-sm font-semibold">
+                  {teacher
+                    ? `Prof. ${teacher.firstName} ${teacher.lastName}`
+                    : 'Sin profesor asignado'}
+                </p>
+                <p className="text-xs text-gray-500">Asignacion actual</p>
               </div>
             </div>
           </div>
@@ -143,6 +166,18 @@ export function StudentProfile() {
                 <span className="text-sm text-gray-500">Teléfono</span>
                 <span className="text-sm font-semibold">
                   {profile?.phone ?? '-'}
+                </span>
+              </div>
+              <div className="px-4 py-3 flex items-center justify-between">
+                <span className="text-sm text-gray-500">Telefono tutor</span>
+                <span className="text-sm font-semibold">
+                  {profile?.guardianPhone ?? '-'}
+                </span>
+              </div>
+              <div className="px-4 py-3 flex items-center justify-between">
+                <span className="text-sm text-gray-500">Gimnasio</span>
+                <span className="text-sm font-semibold">
+                  {profile?.gym ?? '-'}
                 </span>
               </div>
               <div className="px-4 py-3 flex items-center justify-between">

@@ -9,17 +9,17 @@ const roleLabels: Record<UserRole, string> = {
   ADMIN: 'Admin',
 };
 
-type StudentSummary = {
-  dni: string;
+type TeacherSummary = {
   firstName: string;
   lastName: string;
+  assignedAt?: string;
 };
 
 export function Dashboard() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<AuthProfile | null>(getProfile());
   const [displayName, setDisplayName] = useState('');
-  const [studentSummary, setStudentSummary] = useState<StudentSummary | null>(
+  const [teacherSummary, setTeacherSummary] = useState<TeacherSummary | null>(
     null,
   );
   const role = profile?.role ?? 'STUDENT';
@@ -27,6 +27,7 @@ export function Dashboard() {
   const [feeLoading, setFeeLoading] = useState(false);
   const [feeAmount, setFeeAmount] = useState('7500');
   const [feeCurrency, setFeeCurrency] = useState('ARS');
+  const [mpMessage, setMpMessage] = useState('');
 
   const title = useMemo(() => {
     if (role === 'TEACHER') return 'Panel del Profesor';
@@ -43,14 +44,14 @@ export function Dashboard() {
   useEffect(() => {
     if (!profile) {
       setDisplayName('');
-      setStudentSummary(null);
+      setTeacherSummary(null);
       return;
     }
 
     const token = getToken();
     if (!token) {
       setDisplayName('');
-      setStudentSummary(null);
+      setTeacherSummary(null);
       return;
     }
 
@@ -63,11 +64,19 @@ export function Dashboard() {
           if (response.ok) {
             const data = await response.json();
             setDisplayName(`${data.firstName ?? ''} ${data.lastName ?? ''}`.trim());
-            setStudentSummary({
-              dni: data.dni ?? '',
-              firstName: data.firstName ?? '',
-              lastName: data.lastName ?? '',
-            });
+            const teacherResponse = await fetch(
+              `${apiBaseUrl}/students/me/teacher`,
+              {
+                headers: getApiHeaders({ token }),
+              },
+            );
+            if (teacherResponse.ok) {
+              const teacherData =
+                (await teacherResponse.json()) as TeacherSummary | null;
+              setTeacherSummary(teacherData);
+            } else {
+              setTeacherSummary(null);
+            }
             return;
           }
         }
@@ -88,7 +97,7 @@ export function Dashboard() {
         }
       } catch {
         setDisplayName('');
-        setStudentSummary(null);
+        setTeacherSummary(null);
       }
     };
 
@@ -165,6 +174,33 @@ export function Dashboard() {
     }
   };
 
+  const handleConnectMp = async () => {
+    const token = getToken();
+    if (!token) {
+      setMpMessage('Inicia sesion como profesor para conectar Mercado Pago.');
+      return;
+    }
+    setMpMessage('');
+    try {
+      const response = await fetch(`${apiBaseUrl}/teachers/me/mercadopago/connect`, {
+        headers: getApiHeaders({ token }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message ?? 'No se pudo iniciar la conexion.');
+      }
+      const data = (await response.json()) as { url?: string };
+      if (!data?.url) {
+        throw new Error('No se recibio URL de Mercado Pago.');
+      }
+      window.location.href = data.url;
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'No se pudo iniciar la conexion.';
+      setMpMessage(message);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background-light text-[#1b0d0d]">
       <header className="sticky top-0 z-20 bg-background-light/80 backdrop-blur-md border-b border-gray-200">
@@ -230,8 +266,12 @@ export function Dashboard() {
                   <span className="material-symbols-outlined">sports_martial_arts</span>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold">Prof. Ana Martínez</p>
-                  <p className="text-xs text-gray-500">Asignado desde 2022</p>
+                  <p className="text-sm font-semibold">
+                    {teacherSummary
+                      ? `Prof. ${teacherSummary.firstName} ${teacherSummary.lastName}`
+                      : 'Sin profesor asignado'}
+                  </p>
+                  <p className="text-xs text-gray-500">Asignacion actual</p>
                 </div>
               </div>
             </div>
@@ -263,14 +303,11 @@ export function Dashboard() {
                   <span className="text-sm font-semibold">Historial</span>
                   <span className="text-xs text-gray-500">Comprobantes</span>
                 </Link>
-                <Link
-                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
-                  to="/perfil"
-                >
+                <div className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light opacity-70">
                   <span className="material-symbols-outlined text-primary">sports_martial_arts</span>
                   <span className="text-sm font-semibold">Profesor</span>
-                  <span className="text-xs text-gray-500">Asignación actual</span>
-                </Link>
+                  <span className="text-xs text-gray-500">Asignacion actual</span>
+                </div>
               </div>
             </div>
           </section>
@@ -289,22 +326,7 @@ export function Dashboard() {
                   <span className="text-sm font-semibold">Alumnos</span>
                   <span className="text-xs text-gray-500">Listado y estado</span>
                 </Link>
-                <Link
-                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
-                  to="/profesor/asistencia"
-                >
-                  <span className="material-symbols-outlined text-primary">calendar_month</span>
-                  <span className="text-sm font-semibold">Asistencia</span>
-                  <span className="text-xs text-gray-500">Tomas diarias</span>
-                </Link>
-                <Link
-                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
-                  to="/solicitudes"
-                >
-                  <span className="material-symbols-outlined text-primary">notifications</span>
-                  <span className="text-sm font-semibold">Solicitudes</span>
-                  <span className="text-xs text-gray-500">Asignaciones</span>
-                </Link>
+
                 <Link
                   className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
                   to="/perfil"
@@ -313,6 +335,21 @@ export function Dashboard() {
                   <span className="text-sm font-semibold">Mi perfil</span>
                   <span className="text-xs text-gray-500">Datos y cuotas</span>
                 </Link>
+                <div className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light">
+                  <span className="material-symbols-outlined text-primary">payments</span>
+                  <span className="text-sm font-semibold">Mercado Pago</span>
+                  <span className="text-xs text-gray-500">Cobros en tu cuenta</span>
+                  <button
+                    className="mt-2 w-full rounded-lg bg-primary text-white text-xs font-semibold py-2 disabled:opacity-70"
+                    type="button"
+                    onClick={handleConnectMp}
+                  >
+                    Conectar
+                  </button>
+                  {mpMessage && (
+                    <span className="text-[11px] text-gray-500">{mpMessage}</span>
+                  )}
+                </div>
               </div>
             </div>
           </section>
