@@ -65,4 +65,10 @@ export class TeachersController {
   getMpConnectUrl(@Req() req: Request) {
     return this.teachersService.getMpConnectUrl(req['user'].sub);
   }
+
+  @Post('me/mercadopago/disconnect')
+  @Roles(UserRole.TEACHER)
+  disconnectMp(@Req() req: Request) {
+    return this.teachersService.disconnectMp(req['user'].sub);
+  }
 }

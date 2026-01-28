@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { UserRole, UserStatus } from '@prisma/client';
 import { hash } from 'bcryptjs';
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { normalizeDni } from '../normalize';
 import { CreateStudentDto } from './dto/create-student.dto';
@@ -48,6 +48,28 @@ export class TeachersService {
     return this.prisma.teacher.update({
       where: { userId },
       data: dto,
+    });
+  }
+
+  async disconnectMp(userId: string) {
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!teacher) {
+      throw new NotFoundException('Profesor no encontrado.');
+    }
+
+    return this.prisma.teacher.update({
+      where: { userId },
+      data: {
+        mpAccessToken: null,
+        mpRefreshToken: null,
+        mpTokenExpiresAt: null,
+        mpUserId: null,
+        mpConnectedAt: null,
+      },
     });
   }
 
@@ -237,13 +259,17 @@ export class TeachersService {
       throw new BadRequestException('Usuario invalido.');
     }
 
-    const state = this.createMpState(userId);
+    const verifier = this.createPkceVerifier();
+    const challenge = this.createPkceChallenge(verifier);
+    const state = this.createMpState(userId, verifier);
     const url = new URL('https://auth.mercadopago.com/authorization');
     url.searchParams.set('client_id', clientId);
     url.searchParams.set('response_type', 'code');
     url.searchParams.set('platform_id', 'mp');
     url.searchParams.set('redirect_uri', redirectUri);
     url.searchParams.set('state', state);
+    url.searchParams.set('code_challenge', challenge);
+    url.searchParams.set('code_challenge_method', 'S256');
 
     return { url: url.toString() };
   }
@@ -253,7 +279,7 @@ export class TeachersService {
       throw new BadRequestException('Codigo o estado invalido.');
     }
 
-    const userId = this.verifyMpState(state);
+    const { userId, verifier } = this.verifyMpState(state);
     const clientId = process.env.MP_CLIENT_ID;
     const clientSecret = process.env.MP_CLIENT_SECRET;
     const redirectUri = process.env.MP_OAUTH_REDIRECT_URI;
@@ -268,7 +294,11 @@ export class TeachersService {
       client_secret: clientSecret,
       code,
       redirect_uri: redirectUri,
+      code_verifier: verifier,
     });
+    if ((process.env.MP_OAUTH_TEST_TOKEN ?? '').toLowerCase() === 'true') {
+      body.set('test_token', 'true');
+    }
 
     const response = await fetch('https://api.mercadopago.com/oauth/token', {
       method: 'POST',
@@ -290,6 +320,7 @@ export class TeachersService {
       refresh_token: string;
       expires_in: number;
       user_id: number;
+      live_mode?: boolean;
     };
 
     const expiresAt = new Date(Date.now() + data.expires_in * 1000);
@@ -308,13 +339,13 @@ export class TeachersService {
     return { connected: true };
   }
 
-  private createMpState(userId: string) {
+  private createMpState(userId: string, verifier: string) {
     const secret = process.env.MP_OAUTH_STATE_SECRET;
     if (!secret) {
       throw new BadRequestException('MP_OAUTH_STATE_SECRET no configurado.');
     }
     const payload = Buffer.from(
-      JSON.stringify({ userId, ts: Date.now() }),
+      JSON.stringify({ userId, ts: Date.now(), verifier }),
     ).toString('base64url');
     const signature = createHmac('sha256', secret).update(payload).digest('hex');
     return `${payload}.${signature}`;
@@ -341,9 +372,26 @@ export class TeachersService {
       throw new BadRequestException('Estado invalido.');
     }
     const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString());
-    if (!parsed?.userId) {
+    if (!parsed?.userId || !parsed?.verifier) {
       throw new BadRequestException('Estado invalido.');
     }
-    return parsed.userId as string;
+    return { userId: parsed.userId as string, verifier: parsed.verifier as string };
+  }
+
+  private createPkceVerifier() {
+    return this.base64Url(randomBytes(64));
+  }
+
+  private createPkceChallenge(verifier: string) {
+    const hash = createHash('sha256').update(verifier).digest();
+    return this.base64Url(hash);
+  }
+
+  private base64Url(input: Buffer) {
+    return input
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/g, '');
   }
 }

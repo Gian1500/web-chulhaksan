@@ -40,13 +40,14 @@ export class PaymentsService {
       throw new BadRequestException('El alumno no tiene profesor asignado.');
     }
 
-    if (!assignment.teacher.mpAccessToken) {
+    const accessToken = assignment.teacher.mpAccessToken;
+    if (!accessToken) {
       throw new BadRequestException(
         'El profesor no tiene Mercado Pago conectado.',
       );
     }
 
-    return assignment.teacher;
+    return { ...assignment.teacher, mpAccessToken: accessToken };
   }
 
   async createPayment(user: any, dto: CreatePaymentDto) {
@@ -142,10 +143,16 @@ export class PaymentsService {
       },
     });
 
+    const preferSandbox =
+      (process.env.MP_OAUTH_TEST_TOKEN ?? '').toLowerCase() === 'true';
+    const initPoint = preferSandbox
+      ? response.sandbox_init_point ?? response.init_point
+      : response.init_point;
+
     return {
       paymentId: payment.id,
       mpPreferenceId: response.id,
-      initPoint: response.init_point,
+      initPoint,
     };
   }
 

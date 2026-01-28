@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import type { AuthProfile, UserRole } from './auth';
 import { apiBaseUrl, clearAuth, getApiHeaders, getProfile, getToken } from './auth';
 
@@ -17,6 +17,7 @@ type TeacherSummary = {
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [profile, setProfile] = useState<AuthProfile | null>(getProfile());
   const [displayName, setDisplayName] = useState('');
   const [teacherSummary, setTeacherSummary] = useState<TeacherSummary | null>(
@@ -28,6 +29,7 @@ export function Dashboard() {
   const [feeAmount, setFeeAmount] = useState('7500');
   const [feeCurrency, setFeeCurrency] = useState('ARS');
   const [mpMessage, setMpMessage] = useState('');
+  const [mpConnected, setMpConnected] = useState(false);
 
   const title = useMemo(() => {
     if (role === 'TEACHER') return 'Panel del Profesor';
@@ -88,6 +90,7 @@ export function Dashboard() {
           if (response.ok) {
             const data = await response.json();
             setDisplayName(`${data.firstName ?? ''} ${data.lastName ?? ''}`.trim());
+            setMpConnected(!!data.mpConnectedAt);
             return;
           }
         }
@@ -98,11 +101,18 @@ export function Dashboard() {
       } catch {
         setDisplayName('');
         setTeacherSummary(null);
+        setMpConnected(false);
       }
     };
 
     loadName();
   }, [profile]);
+
+  useEffect(() => {
+    if (searchParams.get('mp') === 'connected') {
+      setMpMessage('Mercado Pago conectado.');
+    }
+  }, [searchParams]);
 
   const handleGenerateFees = async () => {
     const token = getToken();
@@ -197,6 +207,34 @@ export function Dashboard() {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'No se pudo iniciar la conexion.';
+      setMpMessage(message);
+    }
+  };
+
+  const handleDisconnectMp = async () => {
+    const token = getToken();
+    if (!token) {
+      setMpMessage('Inicia sesion como profesor para desconectar.');
+      return;
+    }
+    setMpMessage('');
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/teachers/me/mercadopago/disconnect`,
+        {
+          method: 'POST',
+          headers: getApiHeaders({ token }),
+        },
+      );
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message ?? 'No se pudo desconectar.');
+      }
+      setMpConnected(false);
+      setMpMessage('Mercado Pago desconectado.');
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'No se pudo desconectar.';
       setMpMessage(message);
     }
   };
@@ -342,9 +380,9 @@ export function Dashboard() {
                   <button
                     className="mt-2 w-full rounded-lg bg-primary text-white text-xs font-semibold py-2 disabled:opacity-70"
                     type="button"
-                    onClick={handleConnectMp}
+                    onClick={mpConnected ? handleDisconnectMp : handleConnectMp}
                   >
-                    Conectar
+                    {mpConnected ? 'Desconectar' : 'Conectar'}
                   </button>
                   {mpMessage && (
                     <span className="text-[11px] text-gray-500">{mpMessage}</span>
