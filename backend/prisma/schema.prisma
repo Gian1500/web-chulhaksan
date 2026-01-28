@@ -63,6 +63,9 @@ model Teacher {
   lastName  String
   phone     String?
   email     String?
+  birthDate DateTime?
+  address   String?
+  gyms      String[] @default([])
   mpAccessToken   String?
   mpRefreshToken  String?
   mpTokenExpiresAt DateTime?

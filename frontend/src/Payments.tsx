@@ -11,6 +11,12 @@ type FeeItem = {
   dueDate: string;
   paidAt?: string | null;
   lateFeeApplied?: boolean;
+  payments?: { id: string; status?: string }[];
+};
+
+type StudentProfile = {
+  firstName: string;
+  lastName: string;
 };
 
 const monthNames = [
@@ -30,6 +36,7 @@ const monthNames = [
 
 export function Payments() {
   const [fees, setFees] = useState<FeeItem[]>([]);
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -37,6 +44,33 @@ export function Payments() {
     () => fees.filter((fee) => fee.status === 'PENDING').length,
     [fees],
   );
+
+  const paymentHistory = useMemo(() => {
+    return fees
+      .filter((fee) => fee.status === 'PAID')
+      .map((fee) => {
+        const approvedPayment =
+          fee.payments?.find((payment) => payment.status === 'APPROVED') ??
+          fee.payments?.[0];
+        const paidAt = fee.paidAt ? new Date(fee.paidAt) : null;
+        const monthLabel = monthNames[fee.month - 1] ?? `Mes ${fee.month}`;
+        return {
+          feeId: fee.id,
+          paymentId: approvedPayment?.id ?? null,
+          monthLabel,
+          year: fee.year,
+          amount: Number(fee.amount),
+          paidAt,
+          status: 'Acreditado',
+        };
+      })
+      .sort((a, b) => {
+        if (!a.paidAt && !b.paidAt) return 0;
+        if (!a.paidAt) return 1;
+        if (!b.paidAt) return -1;
+        return b.paidAt.getTime() - a.paidAt.getTime();
+      });
+  }, [fees]);
 
   useEffect(() => {
     const token = getToken();
@@ -48,9 +82,19 @@ export function Payments() {
 
     const loadFees = async () => {
       try {
-        const response = await fetch(`${apiBaseUrl}/fees/me`, {
-          headers: getApiHeaders({ token }),
-        });
+        const [feesResponse, profileResponse] = await Promise.all([
+          fetch(`${apiBaseUrl}/fees/me`, {
+            headers: getApiHeaders({ token }),
+          }),
+          fetch(`${apiBaseUrl}/students/me`, {
+            headers: getApiHeaders({ token }),
+          }),
+        ]);
+        if (profileResponse.ok) {
+          const profileData = (await profileResponse.json()) as StudentProfile;
+          setStudentProfile(profileData);
+        }
+        const response = feesResponse;
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
           throw new Error(body.message ?? 'No se pudieron cargar las cuotas.');
@@ -128,14 +172,12 @@ export function Payments() {
                     'url("https://lh3.googleusercontent.com/aida-public/AB6AXuAos5xQbdG0hopRVsTPpirAP0KbSkbwXsF01UGAMj1noMqHm6Vc45_Nq1nXZoQluBpRJRM_3x6J5l3qIiIjj4Kz3hzlnnggc9D3YIpjUGVE82iENCBnwKb_uutYZCpfaEnXcfE-HETPtNWEVy14tzaeDMlXVUtRSyIrkNZMZ6bQegcqEfUuRuhZ_WiJ4u3O6SFgkXkWoAPvIc9jlG0Gm0GkYpSVx-oIviQtjbdgYUF2JMkK9WdFcyjg7hr7ZKMnXz22eTiTHhatuixZ")',
                 }}
               />
-              <div className="absolute -bottom-1 -right-1 bg-primary text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
-                1er Dan
-              </div>
             </div>
             <div className="flex flex-col justify-center">
-              <p className="text-xl font-bold leading-tight">Juan Pérez</p>
-              <p className="text-gray-600 text-sm font-medium">
-                Cinturón Negro
+              <p className="text-xl font-bold leading-tight">
+                {studentProfile
+                  ? `${studentProfile.firstName} ${studentProfile.lastName}`
+                  : 'Alumno'}
               </p>
               <div className="mt-2 flex items-center gap-1.5">
                 <span className="size-2 rounded-full bg-orange-500 animate-pulse" />
@@ -179,14 +221,15 @@ export function Payments() {
             const dueLabel = fee.dueDate
               ? new Date(fee.dueDate).toLocaleDateString('es-AR')
               : '-';
+            const approvedPayment =
+              fee.payments?.find((payment) => payment.status === 'APPROVED') ??
+              fee.payments?.[0];
+            const receiptLink = approvedPayment
+              ? `/pagos/exito?external_reference=${approvedPayment.id}`
+              : null;
 
-            return (
-              <div
-                key={fee.id}
-                className={`bg-white rounded-xl p-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)] border-l-4 ${
-                  paid ? 'border-green-500' : 'border-primary'
-                }`}
-              >
+            const cardContent = (
+              <>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
                     <div
@@ -246,10 +289,32 @@ export function Payments() {
                       <span className="material-symbols-outlined text-lg">
                         qr_code_2
                       </span>
-                      Generar Código QR
+                      Generar Codigo QR
                     </Link>
                   </div>
                 )}
+              </>
+            );
+
+            const cardClassName = `bg-white rounded-xl p-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)] border-l-4 ${
+              paid ? 'border-green-500' : 'border-primary'
+            }`;
+
+            if (paid && receiptLink) {
+              return (
+                <Link
+                  key={fee.id}
+                  className={`${cardClassName} block hover:shadow-md transition-shadow`}
+                  to={receiptLink}
+                >
+                  {cardContent}
+                </Link>
+              );
+            }
+
+            return (
+              <div key={fee.id} className={cardClassName}>
+                {cardContent}
               </div>
             );
           })}
@@ -264,18 +329,62 @@ export function Payments() {
                   Información de Cobro
                 </p>
                 <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                  Las cuotas vencen el día 10 de cada mes. A partir del día 15
-                  se aplica un recargo del 10% por mora administrativa.
+                  Las cuotas vencen el día 10 de cada mes. Desde el día 11 el
+                  importe incluye un recargo fijo de $5000 (no acumulativo).
                 </p>
               </div>
             </div>
           </div>
+
+        <section className="mt-6 px-4 pb-6">
+          <h3 className="text-sm font-bold text-[#1b0d0d] mb-3">
+            Pagos realizados
+          </h3>
+          {paymentHistory.length === 0 ? (
+            <div className="bg-white rounded-xl p-4 border border-gray-100 text-sm text-gray-600">
+              Todav??a no hay pagos registrados.
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="grid grid-cols-[1.2fr_1fr_0.8fr] gap-2 px-4 py-2 bg-gray-50 text-[11px] font-semibold text-gray-500 uppercase">
+                <span>Periodo</span>
+                <span>Fecha</span>
+                <span className="text-right">Importe</span>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {paymentHistory.map((item) => (
+                  <div
+                    key={item.paymentId ?? item.feeId}
+                    className="grid grid-cols-[1.2fr_1fr_0.8fr] gap-2 px-4 py-3 text-sm text-gray-700"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-semibold">
+                        {item.monthLabel} {item.year}
+                      </span>
+                      <span className="text-[11px] text-green-600 font-semibold">
+                        {item.status}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {item.paidAt
+                        ? item.paidAt.toLocaleDateString('es-AR')
+                        : 'Sin fecha'}
+                    </span>
+                    <span className="text-right font-semibold">
+                      ${item.amount.toLocaleString('es-AR')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
         </section>
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-200 pb-6 pt-2">
         <div className="max-w-md mx-auto flex justify-around items-center">
-          <Link className="flex flex-col items-center gap-1 text-gray-400" to="/">
+          <Link className="flex flex-col items-center gap-1 text-gray-400" to="/dashboard">
             <span className="material-symbols-outlined">home</span>
             <span className="text-[10px] font-medium">Inicio</span>
           </Link>
@@ -288,13 +397,6 @@ export function Payments() {
             </span>
             <span className="text-[10px] font-bold">Pagos</span>
           </button>
-          <Link
-            className="flex flex-col items-center gap-1 text-gray-400"
-            to="/pagos/qr"
-          >
-            <span className="material-symbols-outlined">qr_code_2</span>
-            <span className="text-[10px] font-medium">QR</span>
-          </Link>
           <Link
             className="flex flex-col items-center gap-1 text-gray-400"
             to="/perfil"

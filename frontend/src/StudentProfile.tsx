@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { apiBaseUrl, getApiHeaders, getToken } from './auth';
+import {
+  apiBaseUrl,
+  fetchMe,
+  getApiHeaders,
+  getProfile,
+  getToken,
+  type AuthProfile,
+  type UserRole,
+} from './auth';
 
 type StudentProfileData = {
   dni: string;
@@ -20,9 +28,27 @@ type TeacherSummary = {
   assignedAt?: string;
 };
 
+type TeacherProfileData = {
+  firstName: string;
+  lastName: string;
+  phone?: string | null;
+  email?: string | null;
+  birthDate?: string | null;
+  address?: string | null;
+  gyms?: string[] | null;
+};
+
 export function StudentProfile() {
+  const [authProfile, setAuthProfile] = useState<AuthProfile | null>(
+    getProfile(),
+  );
+  const [role, setRole] = useState<UserRole | null>(
+    getProfile()?.role ?? null,
+  );
   const [profile, setProfile] = useState<StudentProfileData | null>(null);
   const [teacher, setTeacher] = useState<TeacherSummary | null>(null);
+  const [teacherProfile, setTeacherProfile] =
+    useState<TeacherProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -36,24 +62,45 @@ export function StudentProfile() {
 
     const loadProfile = async () => {
       try {
-        const response = await fetch(`${apiBaseUrl}/students/me`, {
-          headers: getApiHeaders({ token }),
-        });
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          throw new Error(body.message ?? 'No se pudo cargar el perfil.');
+        let currentProfile = authProfile;
+        if (!currentProfile) {
+          currentProfile = await fetchMe(token);
+          setAuthProfile(currentProfile);
         }
-        const data = (await response.json()) as StudentProfileData;
-        setProfile(data);
-        const teacherResponse = await fetch(`${apiBaseUrl}/students/me/teacher`, {
-          headers: getApiHeaders({ token }),
-        });
-        if (teacherResponse.ok) {
-          const teacherData =
-            (await teacherResponse.json()) as TeacherSummary | null;
-          setTeacher(teacherData);
-        } else {
-          setTeacher(null);
+
+        setRole(currentProfile.role);
+
+        if (currentProfile.role === 'STUDENT') {
+          const response = await fetch(`${apiBaseUrl}/students/me`, {
+            headers: getApiHeaders({ token }),
+          });
+          if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(body.message ?? 'No se pudo cargar el perfil.');
+          }
+          const data = (await response.json()) as StudentProfileData;
+          setProfile(data);
+          const teacherResponse = await fetch(
+            `${apiBaseUrl}/students/me/teacher`,
+            { headers: getApiHeaders({ token }) },
+          );
+          if (teacherResponse.ok) {
+            const teacherData =
+              (await teacherResponse.json()) as TeacherSummary | null;
+            setTeacher(teacherData);
+          } else {
+            setTeacher(null);
+          }
+        } else if (currentProfile.role === 'TEACHER') {
+          const response = await fetch(`${apiBaseUrl}/teachers/me`, {
+            headers: getApiHeaders({ token }),
+          });
+          if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(body.message ?? 'No se pudo cargar el perfil.');
+          }
+          const data = (await response.json()) as TeacherProfileData;
+          setTeacherProfile(data);
         }
       } catch (err) {
         const message =
@@ -70,14 +117,28 @@ export function StudentProfile() {
   }, []);
 
   const fullName = useMemo(() => {
+    if (role === 'TEACHER') {
+      if (!teacherProfile) return 'Profesor';
+      return `${teacherProfile.firstName} ${teacherProfile.lastName}`;
+    }
+    if (role === 'ADMIN') return 'Administrador';
     if (!profile) return 'Alumno';
     return `${profile.firstName} ${profile.lastName}`;
-  }, [profile]);
+  }, [profile, role, teacherProfile]);
 
   const birthDateLabel = useMemo(() => {
     if (!profile?.birthDate) return '-';
     return new Date(profile.birthDate).toLocaleDateString('es-AR');
   }, [profile]);
+
+  const teacherBirthDateLabel = useMemo(() => {
+    if (!teacherProfile?.birthDate) return '-';
+    return new Date(teacherProfile.birthDate).toLocaleDateString('es-AR');
+  }, [teacherProfile]);
+
+  const isTeacher = role === 'TEACHER';
+  const isAdmin = role === 'ADMIN';
+  const isStudent = role === 'STUDENT';
 
   return (
     <div className="min-h-screen bg-background-light text-[#1b0d0d]">
@@ -90,7 +151,11 @@ export function StudentProfile() {
             <span className="material-symbols-outlined">arrow_back_ios</span>
           </Link>
           <h2 className="text-[#1b0d0d] text-lg font-bold leading-tight tracking-tight flex-1 text-center">
-            Perfil del Alumno
+            {isTeacher
+              ? 'Perfil del Profesor'
+              : isAdmin
+                ? 'Perfil del Admin'
+                : 'Perfil del Alumno'}
           </h2>
           <div className="flex w-10 items-center justify-end">
             <span className="material-symbols-outlined">person</span>
@@ -111,35 +176,47 @@ export function StudentProfile() {
             <div className="flex flex-col">
               <p className="text-xl font-bold leading-tight">{fullName}</p>
               <p className="text-gray-600 text-sm font-medium">
-                Cinturón Negro
+                {isTeacher
+                  ? 'Profesor'
+                  : isAdmin
+                    ? 'Administrador'
+                    : 'Cinturon Negro'}
               </p>
-              <p className="text-xs text-gray-500 mt-1">Alumno activo</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {isTeacher
+                  ? 'Profesor activo'
+                  : isAdmin
+                    ? 'Acceso administrador'
+                    : 'Alumno activo'}
+              </p>
             </div>
           </div>
         </section>
 
-        <section className="px-4">
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <h3 className="text-sm uppercase tracking-[0.2em] text-primary font-bold">
-              Profesor Actual
-            </h3>
-            <div className="mt-3 flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined">sports_martial_arts</span>
-              </div>
-              <div>
-                <p className="text-sm font-semibold">
-                  {teacher
-                    ? `Prof. ${teacher.firstName} ${teacher.lastName}`
-                    : 'Sin profesor asignado'}
-                </p>
-                <p className="text-xs text-gray-500">Asignacion actual</p>
+        {isStudent && (
+          <section className="px-4">
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <h3 className="text-sm uppercase tracking-[0.2em] text-primary font-bold">
+                Profesor Actual
+              </h3>
+              <div className="mt-3 flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <span className="material-symbols-outlined">sports_martial_arts</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">
+                    {teacher
+                      ? `Prof. ${teacher.firstName} ${teacher.lastName}`
+                      : 'Sin profesor asignado'}
+                  </p>
+                  <p className="text-xs text-gray-500">Asignacion actual</p>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
-        <section className="px-4 mt-6 space-y-3">
+<section className="px-4 mt-6 space-y-3">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
             <div className="px-4 py-3 border-b border-gray-100">
               <h3 className="text-base font-bold">Datos Personales</h3>
@@ -156,46 +233,100 @@ export function StudentProfile() {
               {error && (
                 <div className="px-4 py-3 text-sm text-red-600">{error}</div>
               )}
-              <div className="px-4 py-3 flex items-center justify-between">
-                <span className="text-sm text-gray-500">DNI</span>
-                <span className="text-sm font-semibold">
-                  {profile?.dni ?? '-'}
-                </span>
-              </div>
-              <div className="px-4 py-3 flex items-center justify-between">
-                <span className="text-sm text-gray-500">Teléfono</span>
-                <span className="text-sm font-semibold">
-                  {profile?.phone ?? '-'}
-                </span>
-              </div>
-              <div className="px-4 py-3 flex items-center justify-between">
-                <span className="text-sm text-gray-500">Telefono tutor</span>
-                <span className="text-sm font-semibold">
-                  {profile?.guardianPhone ?? '-'}
-                </span>
-              </div>
-              <div className="px-4 py-3 flex items-center justify-between">
-                <span className="text-sm text-gray-500">Gimnasio</span>
-                <span className="text-sm font-semibold">
-                  {profile?.gym ?? '-'}
-                </span>
-              </div>
-              <div className="px-4 py-3 flex items-center justify-between">
-                <span className="text-sm text-gray-500">Email</span>
-                <span className="text-sm font-semibold">
-                  {profile?.email ?? '-'}
-                </span>
-              </div>
-              <div className="px-4 py-3 flex items-center justify-between">
-                <span className="text-sm text-gray-500">Dirección</span>
-                <span className="text-sm font-semibold">
-                  {profile?.address ?? '-'}
-                </span>
-              </div>
-              <div className="px-4 py-3 flex items-center justify-between">
-                <span className="text-sm text-gray-500">Nacimiento</span>
-                <span className="text-sm font-semibold">{birthDateLabel}</span>
-              </div>
+              {isStudent && (
+                <>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">DNI</span>
+                    <span className="text-sm font-semibold">
+                      {profile?.dni ?? '-'}
+                    </span>
+                  </div>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Telefono</span>
+                    <span className="text-sm font-semibold">
+                      {profile?.phone ?? '-'}
+                    </span>
+                  </div>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Telefono tutor</span>
+                    <span className="text-sm font-semibold">
+                      {profile?.guardianPhone ?? '-'}
+                    </span>
+                  </div>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Gimnasio</span>
+                    <span className="text-sm font-semibold">
+                      {profile?.gym ?? '-'}
+                    </span>
+                  </div>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Email</span>
+                    <span className="text-sm font-semibold">
+                      {profile?.email ?? '-'}
+                    </span>
+                  </div>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Direccion</span>
+                    <span className="text-sm font-semibold">
+                      {profile?.address ?? '-'}
+                    </span>
+                  </div>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Nacimiento</span>
+                    <span className="text-sm font-semibold">{birthDateLabel}</span>
+                  </div>
+                </>
+              )}
+              {isTeacher && (
+                <>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">DNI</span>
+                    <span className="text-sm font-semibold">
+                      {authProfile?.dni ?? '-'}
+                    </span>
+                  </div>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Telefono</span>
+                    <span className="text-sm font-semibold">
+                      {teacherProfile?.phone ?? '-'}
+                    </span>
+                  </div>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Email</span>
+                    <span className="text-sm font-semibold">
+                      {teacherProfile?.email ?? '-'}
+                    </span>
+                  </div>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Direccion</span>
+                    <span className="text-sm font-semibold">
+                      {teacherProfile?.address ?? '-'}
+                    </span>
+                  </div>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Nacimiento</span>
+                    <span className="text-sm font-semibold">
+                      {teacherBirthDateLabel}
+                    </span>
+                  </div>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Gimnasios</span>
+                    <span className="text-sm font-semibold">
+                      {teacherProfile?.gyms && teacherProfile.gyms.length > 0
+                        ? teacherProfile.gyms.join(', ')
+                        : '-'}
+                    </span>
+                  </div>
+                </>
+              )}
+{isAdmin && (
+                <div className="px-4 py-3 flex items-center justify-between">
+                  <span className="text-sm text-gray-500">DNI</span>
+                  <span className="text-sm font-semibold">
+                    {authProfile?.dni ?? '-'}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </section>

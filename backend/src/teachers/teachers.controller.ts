@@ -5,7 +5,6 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { CreateStudentDto } from './dto/create-student.dto';
-import { UpdateTeacherDto } from './dto/update-teacher.dto';
 
 @Controller('teachers')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -52,12 +51,6 @@ export class TeachersController {
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   getById(@Param('id') id: string) {
     return this.teachersService.getById(id);
-  }
-
-  @Patch('me')
-  @Roles(UserRole.TEACHER)
-  updateMe(@Req() req: Request, @Body() dto: UpdateTeacherDto) {
-    return this.teachersService.updateByUserId(req['user'].sub, dto);
   }
 
   @Get('me/mercadopago/connect')

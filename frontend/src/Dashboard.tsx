@@ -333,19 +333,6 @@ export function Dashboard() {
                   <span className="text-sm font-semibold">Perfil</span>
                   <span className="text-xs text-gray-500">Datos personales</span>
                 </Link>
-                <Link
-                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
-                  to="/pagos"
-                >
-                  <span className="material-symbols-outlined text-primary">receipt_long</span>
-                  <span className="text-sm font-semibold">Historial</span>
-                  <span className="text-xs text-gray-500">Comprobantes</span>
-                </Link>
-                <div className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light opacity-70">
-                  <span className="material-symbols-outlined text-primary">sports_martial_arts</span>
-                  <span className="text-sm font-semibold">Profesor</span>
-                  <span className="text-xs text-gray-500">Asignacion actual</span>
-                </div>
               </div>
             </div>
           </section>
@@ -358,7 +345,7 @@ export function Dashboard() {
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <Link
                   className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
-                  to="/profesor/alumnos"
+                  to="/admin/alumnos"
                 >
                   <span className="material-symbols-outlined text-primary">group</span>
                   <span className="text-sm font-semibold">Alumnos</span>
@@ -400,7 +387,7 @@ export function Dashboard() {
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <Link
                   className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
-                  to="/profesor/alumnos"
+                  to="/admin/alumnos"
                 >
                   <span className="material-symbols-outlined text-primary">group</span>
                   <span className="text-sm font-semibold">Alumnos</span>
@@ -408,19 +395,11 @@ export function Dashboard() {
                 </Link>
                 <Link
                   className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
-                  to="/solicitudes"
+                  to="/admin/profesores"
                 >
-                  <span className="material-symbols-outlined text-primary">rule_settings</span>
-                  <span className="text-sm font-semibold">Aprobaciones</span>
-                  <span className="text-xs text-gray-500">Altas y cambios</span>
-                </Link>
-                <Link
-                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
-                  to="/pagos"
-                >
-                  <span className="material-symbols-outlined text-primary">payments</span>
-                  <span className="text-sm font-semibold">Pagos</span>
-                  <span className="text-xs text-gray-500">Cobros globales</span>
+                  <span className="material-symbols-outlined text-primary">badge</span>
+                  <span className="text-sm font-semibold">Profesores</span>
+                  <span className="text-xs text-gray-500">Editar profesores</span>
                 </Link>
                 <Link
                   className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"

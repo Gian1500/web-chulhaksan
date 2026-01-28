@@ -7,6 +7,8 @@ import { UserRole } from '@prisma/client';
 import { CreateAdminUserDto } from './dto/create-admin-user.dto';
 import { ListUsersDto } from './dto/list-users.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import { UpdateStudentDto } from '../students/dto/update-student.dto';
+import { UpdateTeacherDto } from '../teachers/dto/update-teacher.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -34,8 +36,18 @@ export class AdminController {
     return this.adminService.listStudents();
   }
 
+  @Patch('students/:dni')
+  updateStudent(@Param('dni') dni: string, @Body() dto: UpdateStudentDto) {
+    return this.adminService.updateStudent(dni, dto);
+  }
+
   @Get('teachers')
   listTeachers() {
     return this.adminService.listTeachers();
+  }
+
+  @Patch('teachers/:id')
+  updateTeacher(@Param('id') id: string, @Body() dto: UpdateTeacherDto) {
+    return this.adminService.updateTeacher(id, dto);
   }
 }

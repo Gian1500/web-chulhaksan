@@ -6,6 +6,8 @@ import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UserRole, UserStatus } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { normalizeDni } from '../normalize';
+import { UpdateStudentDto } from '../students/dto/update-student.dto';
+import { UpdateTeacherDto } from '../teachers/dto/update-teacher.dto';
 
 @Injectable()
 export class AdminService {
@@ -138,6 +140,44 @@ export class AdminService {
         },
       },
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async updateStudent(dni: string, dto: UpdateStudentDto) {
+    const normalizedDni = normalizeDni(dni);
+    const student = await this.prisma.student.findUnique({
+      where: { dni: normalizedDni },
+      select: { dni: true },
+    });
+    if (!student) {
+      throw new NotFoundException('Alumno no encontrado.');
+    }
+
+    return this.prisma.student.update({
+      where: { dni: normalizedDni },
+      data: {
+        ...dto,
+        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+      },
+    });
+  }
+
+  async updateTeacher(id: string, dto: UpdateTeacherDto) {
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!teacher) {
+      throw new NotFoundException('Profesor no encontrado.');
+    }
+
+    return this.prisma.teacher.update({
+      where: { id },
+      data: {
+        ...dto,
+        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+        gyms: dto.gyms ?? undefined,
+      },
     });
   }
 }

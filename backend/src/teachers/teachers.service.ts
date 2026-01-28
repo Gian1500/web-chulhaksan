@@ -5,7 +5,6 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { normalizeDni } from '../normalize';
 import { CreateStudentDto } from './dto/create-student.dto';
-import { UpdateTeacherDto } from './dto/update-teacher.dto';
 
 @Injectable()
 export class TeachersService {
@@ -33,22 +32,6 @@ export class TeachersService {
     }
 
     return teacher;
-  }
-
-  async updateByUserId(userId: string, dto: UpdateTeacherDto) {
-    const teacher = await this.prisma.teacher.findUnique({
-      where: { userId },
-      select: { id: true },
-    });
-
-    if (!teacher) {
-      throw new NotFoundException('Profesor no encontrado.');
-    }
-
-    return this.prisma.teacher.update({
-      where: { userId },
-      data: dto,
-    });
   }
 
   async disconnectMp(userId: string) {

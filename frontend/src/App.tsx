@@ -11,6 +11,8 @@ import { StudentProfile } from './StudentProfile';
 import { Dashboard } from './Dashboard';
 import { ForgotPassword } from './ForgotPassword';
 import { ForgotPasswordSuccess } from './ForgotPasswordSuccess';
+import { AdminStudents } from './AdminStudents';
+import { AdminTeachers } from './AdminTeachers';
 
 export function App() {
   return (
@@ -28,6 +30,8 @@ export function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/recuperar" element={<ForgotPassword />} />
         <Route path="/recuperar/enviado" element={<ForgotPasswordSuccess />} />
+        <Route path="/admin/alumnos" element={<AdminStudents />} />
+        <Route path="/admin/profesores" element={<AdminTeachers />} />
       </Routes>
     </BrowserRouter>
   );

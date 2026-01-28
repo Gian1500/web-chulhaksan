@@ -465,15 +465,16 @@ export function TeacherStudents() {
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Telefono del alumno (opcional)"
+                placeholder="Telefono del alumno"
                 value={form.phone}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, phone: event.target.value }))
                 }
+                required
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Telefono tutor (opcional)"
+                placeholder="Telefono tutor"
                 value={form.guardianPhone}
                 onChange={(event) =>
                   setForm((prev) => ({
@@ -481,15 +482,17 @@ export function TeacherStudents() {
                     guardianPhone: event.target.value,
                   }))
                 }
+                required
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Contrasena (opcional, por defecto DNI)"
+                placeholder="Contrasena"
                 type="password"
                 value={form.password}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, password: event.target.value }))
                 }
+                required
               />
               <button
                 className="w-full rounded-lg bg-primary text-white text-sm font-semibold py-3 disabled:opacity-70"

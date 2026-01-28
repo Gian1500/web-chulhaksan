@@ -33,7 +33,7 @@ export class StudentsController {
   }
 
   @Patch(':dni')
-  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  @Roles(UserRole.ADMIN)
   updateByDni(@Param('dni') dni: string, @Body() dto: UpdateStudentDto) {
     return this.studentsService.updateByDni(dni, dto);
   }
