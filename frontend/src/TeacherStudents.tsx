@@ -108,7 +108,9 @@ export function TeacherStudents() {
       setAssigned((current) =>
         current.map((student) => {
           const match = statusResults.find((item) => item.dni === student.dni);
-          return match ? { ...student, status: match.status } : student;
+          return match
+            ? { ...student, status: match.status as StudentWithStatus['status'] }
+            : student;
         }),
       );
     } catch (err) {
