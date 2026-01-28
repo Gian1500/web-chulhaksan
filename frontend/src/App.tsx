@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Home } from './Home';
 import { Login } from './Login';
 import { Payments } from './Payments';
@@ -13,6 +13,18 @@ import { ForgotPassword } from './ForgotPassword';
 import { ForgotPasswordSuccess } from './ForgotPasswordSuccess';
 import { AdminStudents } from './AdminStudents';
 import { AdminTeachers } from './AdminTeachers';
+import { getProfile } from './auth';
+
+function AdminRoute({ children }: { children: JSX.Element }) {
+  const profile = getProfile();
+  if (!profile) {
+    return <Navigate to="/login" replace />;
+  }
+  if (profile.role !== 'ADMIN') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+}
 
 export function App() {
   return (
@@ -30,8 +42,22 @@ export function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/recuperar" element={<ForgotPassword />} />
         <Route path="/recuperar/enviado" element={<ForgotPasswordSuccess />} />
-        <Route path="/admin/alumnos" element={<AdminStudents />} />
-        <Route path="/admin/profesores" element={<AdminTeachers />} />
+        <Route
+          path="/admin/alumnos"
+          element={
+            <AdminRoute>
+              <AdminStudents />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/profesores"
+          element={
+            <AdminRoute>
+              <AdminTeachers />
+            </AdminRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

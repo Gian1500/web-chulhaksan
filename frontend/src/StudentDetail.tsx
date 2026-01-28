@@ -118,7 +118,7 @@ export function StudentDetail() {
       }
       const updatedFees = fees.map((fee) =>
         fee.id === feeId
-          ? { ...fee, status: 'PAID', paidAt: new Date().toISOString() }
+          ? { ...fee, status: 'PAID' as const, paidAt: new Date().toISOString() }
           : fee,
       );
       setFees(updatedFees);

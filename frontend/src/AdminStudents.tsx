@@ -105,15 +105,16 @@ export function AdminStudents() {
     });
   };
 
-  const buildPayload = () => {
-    const payload: Record<string, string> = {};
-    const entries: [keyof StudentForm, string][] = Object.entries(form) as any;
-    for (const [key, value] of entries) {
-      const trimmed = value.trim();
-      if (trimmed.length > 0) payload[key] = trimmed;
-    }
-    return payload;
-  };
+  const buildPayload = () => ({
+    firstName: form.firstName.trim(),
+    lastName: form.lastName.trim(),
+    email: form.email.trim() || null,
+    phone: form.phone.trim() || null,
+    guardianPhone: form.guardianPhone.trim() || null,
+    gym: form.gym.trim() || null,
+    birthDate: form.birthDate.trim() || null,
+    address: form.address.trim() || null,
+  });
 
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();

@@ -101,22 +101,20 @@ export function AdminTeachers() {
     });
   };
 
-  const buildPayload = () => {
-    const payload: Record<string, string | string[]> = {};
-    if (form.firstName.trim()) payload.firstName = form.firstName.trim();
-    if (form.lastName.trim()) payload.lastName = form.lastName.trim();
-    if (form.email.trim()) payload.email = form.email.trim();
-    if (form.phone.trim()) payload.phone = form.phone.trim();
-    if (form.birthDate.trim()) payload.birthDate = form.birthDate.trim();
-    if (form.address.trim()) payload.address = form.address.trim();
-    if (form.gyms.trim()) {
-      payload.gyms = form.gyms
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean);
-    }
-    return payload;
-  };
+  const buildPayload = () => ({
+    firstName: form.firstName.trim(),
+    lastName: form.lastName.trim(),
+    email: form.email.trim() || null,
+    phone: form.phone.trim() || null,
+    birthDate: form.birthDate.trim() || null,
+    address: form.address.trim() || null,
+    gyms: form.gyms.trim()
+      ? form.gyms
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : null,
+  });
 
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();
