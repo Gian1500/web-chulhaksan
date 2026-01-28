@@ -5,14 +5,14 @@ import { Payments } from './Payments';
 import { PaymentQr } from './PaymentQr';
 import { StudentDetail } from './StudentDetail';
 import { TeacherStudents } from './TeacherStudents';
-import { Attendance } from './Attendance';
 import { PaymentReceiptSuccess } from './PaymentReceiptSuccess';
 import { PaymentReceiptError } from './PaymentReceiptError';
-import { Requests } from './Requests';
 import { StudentProfile } from './StudentProfile';
 import { Dashboard } from './Dashboard';
 import { ForgotPassword } from './ForgotPassword';
 import { ForgotPasswordSuccess } from './ForgotPasswordSuccess';
+import { AdminStudents } from './AdminStudents';
+import { AdminTeachers } from './AdminTeachers';
 
 export function App() {
   return (
@@ -24,14 +24,14 @@ export function App() {
         <Route path="/pagos/qr" element={<PaymentQr />} />
         <Route path="/alumno/:dni" element={<StudentDetail />} />
         <Route path="/profesor/alumnos" element={<TeacherStudents />} />
-        <Route path="/profesor/asistencia" element={<Attendance />} />
-        <Route path="/solicitudes" element={<Requests />} />
         <Route path="/pagos/exito" element={<PaymentReceiptSuccess />} />
         <Route path="/pagos/error" element={<PaymentReceiptError />} />
         <Route path="/perfil" element={<StudentProfile />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/recuperar" element={<ForgotPassword />} />
         <Route path="/recuperar/enviado" element={<ForgotPasswordSuccess />} />
+        <Route path="/admin/alumnos" element={<AdminStudents />} />
+        <Route path="/admin/profesores" element={<AdminTeachers />} />
       </Routes>
     </BrowserRouter>
   );

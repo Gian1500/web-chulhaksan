@@ -1,13 +1,14 @@
-import { IsEmail, IsEnum, IsOptional, IsString, Length } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, Length, Matches } from 'class-validator';
 import { UserRole } from '@prisma/client';
 
 export class CreateAdminUserDto {
   @IsString()
   @Length(6, 12)
+  @Matches(/^\d+$/, { message: 'El DNI debe contener solo numeros.' })
   dni: string;
 
   @IsString()
-  @Length(8, 64)
+  @Length(6, 64)
   password: string;
 
   @IsEnum(UserRole)
@@ -29,4 +30,14 @@ export class CreateAdminUserDto {
   @IsString()
   @Length(6, 30)
   phone?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(6, 30)
+  guardianPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(2, 80)
+  gym?: string;
 }

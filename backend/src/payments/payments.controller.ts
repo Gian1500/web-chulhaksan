@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -32,7 +32,7 @@ export class PaymentsController {
   }
 
   @Post('webhook')
-  webhook(@Body() body: any) {
-    return this.paymentsService.handleWebhook(body);
+  webhook(@Body() body: any, @Query('teacherId') teacherId?: string) {
+    return this.paymentsService.handleWebhookWithTeacher(body, teacherId);
   }
 }

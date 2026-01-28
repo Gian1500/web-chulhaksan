@@ -9,6 +9,7 @@ export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const sanitizeDni = (value: string) => value.replace(/\D/g, '');
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -76,10 +77,10 @@ export function Login() {
                 <input
                   className="form-input flex w-full rounded-xl text-[#1a1a2e] border-slate-200 bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary h-[58px] placeholder:text-slate-300 pl-12 pr-4 text-base font-normal transition-all shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)]"
                   inputMode="numeric"
-                  placeholder="Ej: 12.345.678"
+                  placeholder="Ej: 12345678"
                   type="text"
                   value={dni}
-                  onChange={(event) => setDni(event.target.value)}
+                  onChange={(event) => setDni(sanitizeDni(event.target.value))}
                   required
                 />
               </div>

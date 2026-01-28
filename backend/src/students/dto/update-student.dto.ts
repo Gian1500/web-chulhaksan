@@ -21,6 +21,16 @@ export class UpdateStudentDto {
   phone?: string;
 
   @IsOptional()
+  @IsString()
+  @Length(6, 30)
+  guardianPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(2, 80)
+  gym?: string;
+
+  @IsOptional()
   @IsDateString()
   birthDate?: string;
 

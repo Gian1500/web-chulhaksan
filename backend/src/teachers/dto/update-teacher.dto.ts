@@ -1,4 +1,11 @@
-import { IsEmail, IsOptional, IsString, Length } from 'class-validator';
+import {
+  IsArray,
+  IsDateString,
+  IsEmail,
+  IsOptional,
+  IsString,
+  Length,
+} from 'class-validator';
 
 export class UpdateTeacherDto {
   @IsOptional()
@@ -19,4 +26,18 @@ export class UpdateTeacherDto {
   @IsString()
   @Length(6, 30)
   phone?: string;
+
+  @IsOptional()
+  @IsDateString()
+  birthDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 120)
+  address?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  gyms?: string[];
 }

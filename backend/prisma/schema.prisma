@@ -63,6 +63,14 @@ model Teacher {
   lastName  String
   phone     String?
   email     String?
+  birthDate DateTime?
+  address   String?
+  gyms      String[] @default([])
+  mpAccessToken   String?
+  mpRefreshToken  String?
+  mpTokenExpiresAt DateTime?
+  mpUserId        String?
+  mpConnectedAt   DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -78,7 +86,9 @@ model Student {
   lastName  String
   birthDate DateTime?
   phone     String?
+  guardianPhone String?
   email     String?
+  gym       String?
   address   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

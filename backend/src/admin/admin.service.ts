@@ -5,6 +5,9 @@ import { ListUsersDto } from './dto/list-users.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UserRole, UserStatus } from '@prisma/client';
 import { hash } from 'bcryptjs';
+import { normalizeDni } from '../normalize';
+import { UpdateStudentDto } from '../students/dto/update-student.dto';
+import { UpdateTeacherDto } from '../teachers/dto/update-teacher.dto';
 
 @Injectable()
 export class AdminService {
@@ -46,8 +49,9 @@ export class AdminService {
       throw new BadRequestException('No puedes crear admin desde aqui.');
     }
 
+    const normalizedDni = normalizeDni(dto.dni);
     const existing = await this.prisma.user.findUnique({
-      where: { dni: dto.dni },
+      where: { dni: normalizedDni },
       select: { id: true },
     });
     if (existing) {
@@ -59,7 +63,7 @@ export class AdminService {
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
-          dni: dto.dni,
+          dni: normalizedDni,
           passwordHash,
           role: dto.role,
           status: UserStatus.ACTIVE,
@@ -69,12 +73,14 @@ export class AdminService {
       if (dto.role === UserRole.STUDENT) {
         await tx.student.create({
           data: {
-            dni: dto.dni,
+            dni: normalizedDni,
             userId: user.id,
             firstName: dto.firstName,
             lastName: dto.lastName,
             email: dto.email,
             phone: dto.phone,
+            guardianPhone: dto.guardianPhone,
+            gym: dto.gym,
           },
         });
       }
@@ -134,6 +140,44 @@ export class AdminService {
         },
       },
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async updateStudent(dni: string, dto: UpdateStudentDto) {
+    const normalizedDni = normalizeDni(dni);
+    const student = await this.prisma.student.findUnique({
+      where: { dni: normalizedDni },
+      select: { dni: true },
+    });
+    if (!student) {
+      throw new NotFoundException('Alumno no encontrado.');
+    }
+
+    return this.prisma.student.update({
+      where: { dni: normalizedDni },
+      data: {
+        ...dto,
+        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+      },
+    });
+  }
+
+  async updateTeacher(id: string, dto: UpdateTeacherDto) {
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!teacher) {
+      throw new NotFoundException('Profesor no encontrado.');
+    }
+
+    return this.prisma.teacher.update({
+      where: { id },
+      data: {
+        ...dto,
+        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+        gyms: dto.gyms ?? undefined,
+      },
     });
   }
 }
