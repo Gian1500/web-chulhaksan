@@ -156,8 +156,18 @@ export class AdminService {
     return this.prisma.student.update({
       where: { dni: normalizedDni },
       data: {
-        ...dto,
-        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+        firstName: dto.firstName ?? undefined,
+        lastName: dto.lastName ?? undefined,
+        email: dto.email ?? undefined,
+        phone: dto.phone ?? undefined,
+        guardianPhone: dto.guardianPhone ?? undefined,
+        gym: dto.gym ?? undefined,
+        address: dto.address ?? undefined,
+        birthDate: dto.birthDate
+          ? new Date(dto.birthDate)
+          : dto.birthDate === null
+            ? null
+            : undefined,
       },
     });
   }
@@ -174,9 +184,17 @@ export class AdminService {
     return this.prisma.teacher.update({
       where: { id },
       data: {
-        ...dto,
-        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
-        gyms: dto.gyms ?? undefined,
+        firstName: dto.firstName ?? undefined,
+        lastName: dto.lastName ?? undefined,
+        email: dto.email ?? undefined,
+        phone: dto.phone ?? undefined,
+        address: dto.address ?? undefined,
+        birthDate: dto.birthDate
+          ? new Date(dto.birthDate)
+          : dto.birthDate === null
+            ? null
+            : undefined,
+        gyms: dto.gyms === null ? [] : dto.gyms ?? undefined,
       },
     });
   }

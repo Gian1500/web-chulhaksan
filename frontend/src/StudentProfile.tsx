@@ -175,13 +175,11 @@ export function StudentProfile() {
             />
             <div className="flex flex-col">
               <p className="text-xl font-bold leading-tight">{fullName}</p>
-              <p className="text-gray-600 text-sm font-medium">
-                {isTeacher
-                  ? 'Profesor'
-                  : isAdmin
-                    ? 'Administrador'
-                    : 'Cinturon Negro'}
-              </p>
+              {!isStudent && (
+                <p className="text-gray-600 text-sm font-medium">
+                  {isTeacher ? 'Profesor' : 'Administrador'}
+                </p>
+              )}
               <p className="text-xs text-gray-500 mt-1">
                 {isTeacher
                   ? 'Profesor activo'
