@@ -59,13 +59,15 @@ export function AdminTeachers() {
     try {
       const response = await fetch(`${apiBaseUrl}/admin/teachers`, {
         headers: getApiHeaders({ token }),
+        cache: 'no-store',
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.message ?? 'No se pudo cargar el listado.');
       }
-      const data = (await response.json()) as AdminTeacher[];
-      setTeachers(data ?? []);
+      const data = (await response.json()) as AdminTeacher[] | { data?: AdminTeacher[] };
+      const list = Array.isArray(data) ? data : data?.data ?? [];
+      setTeachers(list);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'No se pudo cargar el listado.';

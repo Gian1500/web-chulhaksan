@@ -345,7 +345,7 @@ export function Dashboard() {
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <Link
                   className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
-                  to="/admin/alumnos"
+                  to="/profesor/alumnos"
                 >
                   <span className="material-symbols-outlined text-primary">group</span>
                   <span className="text-sm font-semibold">Alumnos</span>
