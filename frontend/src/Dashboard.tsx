@@ -293,6 +293,17 @@ export function Dashboard() {
           </div>
         </section>
 
+        {profile && (
+          <section className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
+            <p className="text-sm font-semibold text-[#1b0d0d]">
+              Bienvenido/a {roleLabels[role]}
+            </p>
+            <p className="text-xs text-gray-600 mt-1">
+              {displayName || 'Usuario'}
+            </p>
+          </section>
+        )}
+
         {role === 'STUDENT' && (
           <section className="space-y-4">
             <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
@@ -345,7 +356,7 @@ export function Dashboard() {
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <Link
                   className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
-                  to="/admin/alumnos"
+                  to="/profesor/alumnos"
                 >
                   <span className="material-symbols-outlined text-primary">group</span>
                   <span className="text-sm font-semibold">Alumnos</span>
@@ -365,7 +376,9 @@ export function Dashboard() {
                   <span className="text-sm font-semibold">Mercado Pago</span>
                   <span className="text-xs text-gray-500">Cobros en tu cuenta</span>
                   <button
-                    className="mt-2 w-full rounded-lg bg-primary text-white text-xs font-semibold py-2 disabled:opacity-70"
+                    className={`mt-2 w-full rounded-lg text-white text-xs font-semibold py-2 disabled:opacity-70 ${
+                      mpConnected ? 'bg-green-600' : 'bg-primary'
+                    }`}
                     type="button"
                     onClick={mpConnected ? handleDisconnectMp : handleConnectMp}
                   >
