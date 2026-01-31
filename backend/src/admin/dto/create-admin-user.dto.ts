@@ -1,4 +1,13 @@
-import { IsEmail, IsEnum, IsOptional, IsString, Length, Matches } from 'class-validator';
+import {
+  IsArray,
+  IsDateString,
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+} from 'class-validator';
 import { UserRole } from '@prisma/client';
 
 export class CreateAdminUserDto {
@@ -22,14 +31,12 @@ export class CreateAdminUserDto {
   @Length(1, 60)
   lastName: string;
 
-  @IsOptional()
   @IsEmail()
-  email?: string;
+  email: string;
 
-  @IsOptional()
   @IsString()
   @Length(6, 30)
-  phone?: string;
+  phone: string;
 
   @IsOptional()
   @IsString()
@@ -40,4 +47,16 @@ export class CreateAdminUserDto {
   @IsString()
   @Length(2, 80)
   gym?: string;
+
+  @IsDateString()
+  birthDate: string;
+
+  @IsString()
+  @Length(3, 120)
+  address: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  gyms?: string[];
 }

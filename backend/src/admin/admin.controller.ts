@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -36,6 +36,11 @@ export class AdminController {
     return this.adminService.listStudents();
   }
 
+  @Delete('students/:dni')
+  deleteStudent(@Param('dni') dni: string) {
+    return this.adminService.deleteStudent(dni);
+  }
+
   @Patch('students/:dni')
   updateStudent(@Param('dni') dni: string, @Body() dto: UpdateStudentDto) {
     return this.adminService.updateStudent(dni, dto);
@@ -44,6 +49,11 @@ export class AdminController {
   @Get('teachers')
   listTeachers() {
     return this.adminService.listTeachers();
+  }
+
+  @Delete('teachers/:id')
+  deleteTeacher(@Param('id') id: string) {
+    return this.adminService.deleteTeacher(id);
   }
 
   @Patch('teachers/:id')

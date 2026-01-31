@@ -49,6 +49,22 @@ export class AdminService {
       throw new BadRequestException('No puedes crear admin desde aqui.');
     }
 
+    if (dto.role === UserRole.STUDENT) {
+      if (!dto.guardianPhone || !dto.gym) {
+        throw new BadRequestException(
+          'Guardian phone y gimnasio son obligatorios para alumnos.',
+        );
+      }
+    }
+
+    if (dto.role === UserRole.TEACHER) {
+      if (!dto.gyms || dto.gyms.length === 0) {
+        throw new BadRequestException(
+          'Los gimnasios son obligatorios para profesores.',
+        );
+      }
+    }
+
     const normalizedDni = normalizeDni(dto.dni);
     const existing = await this.prisma.user.findUnique({
       where: { dni: normalizedDni },
@@ -81,6 +97,8 @@ export class AdminService {
             phone: dto.phone,
             guardianPhone: dto.guardianPhone,
             gym: dto.gym,
+            birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+            address: dto.address,
           },
         });
       }
@@ -93,6 +111,9 @@ export class AdminService {
             lastName: dto.lastName,
             email: dto.email,
             phone: dto.phone,
+            birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+            address: dto.address,
+            gyms: dto.gyms ?? [],
           },
         });
       }
@@ -141,6 +162,58 @@ export class AdminService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async deleteStudent(dni: string) {
+    const normalizedDni = normalizeDni(dni);
+    const student = await this.prisma.student.findUnique({
+      where: { dni: normalizedDni },
+      select: { dni: true, userId: true },
+    });
+    if (!student) {
+      throw new NotFoundException('Alumno no encontrado.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.payment.deleteMany({
+        where: { fee: { studentDni: normalizedDni } },
+      });
+      await tx.monthlyFee.deleteMany({ where: { studentDni: normalizedDni } });
+      await tx.attendance.deleteMany({ where: { studentDni: normalizedDni } });
+      await tx.studentTeacherAssignment.deleteMany({
+        where: { studentDni: normalizedDni },
+      });
+      await tx.studentTeacherRequest.deleteMany({
+        where: { studentDni: normalizedDni },
+      });
+      await tx.student.delete({ where: { dni: normalizedDni } });
+      await tx.user.delete({ where: { id: student.userId } });
+    });
+
+    return { deleted: true };
+  }
+
+  async deleteTeacher(id: string) {
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { id },
+      select: { id: true, userId: true },
+    });
+    if (!teacher) {
+      throw new NotFoundException('Profesor no encontrado.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.studentTeacherAssignment.deleteMany({
+        where: { teacherId: id },
+      });
+      await tx.studentTeacherRequest.deleteMany({
+        where: { teacherId: id },
+      });
+      await tx.teacher.delete({ where: { id } });
+      await tx.user.delete({ where: { id: teacher.userId } });
+    });
+
+    return { deleted: true };
   }
 
   async updateStudent(dni: string, dto: UpdateStudentDto) {

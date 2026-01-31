@@ -192,7 +192,7 @@ export class TeachersService {
       throw new BadRequestException('El DNI ya esta registrado.');
     }
 
-    const passwordValue = dto.password?.trim() || normalizedDni;
+    const passwordValue = dto.password.trim();
     const passwordHash = await hash(passwordValue, 10);
 
     return this.prisma.$transaction(async (tx) => {

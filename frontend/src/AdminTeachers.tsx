@@ -27,6 +27,11 @@ type TeacherForm = {
   gyms: string;
 };
 
+type CreateTeacherForm = TeacherForm & {
+  dni: string;
+  password: string;
+};
+
 const emptyForm: TeacherForm = {
   firstName: '',
   lastName: '',
@@ -37,6 +42,12 @@ const emptyForm: TeacherForm = {
   gyms: '',
 };
 
+const emptyCreateForm: CreateTeacherForm = {
+  ...emptyForm,
+  dni: '',
+  password: '',
+};
+
 export function AdminTeachers() {
   const [teachers, setTeachers] = useState<AdminTeacher[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +56,11 @@ export function AdminTeachers() {
   const [editing, setEditing] = useState<AdminTeacher | null>(null);
   const [form, setForm] = useState<TeacherForm>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState<CreateTeacherForm>(emptyCreateForm);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [editError, setEditError] = useState('');
 
   const loadTeachers = async () => {
     const token = getToken();
@@ -125,6 +141,7 @@ export function AdminTeachers() {
     if (!token) return;
     setSaving(true);
     setError('');
+    setEditError('');
     try {
       const response = await fetch(
         `${apiBaseUrl}/admin/teachers/${editing.id}`,
@@ -144,9 +161,80 @@ export function AdminTeachers() {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'No se pudo guardar el profesor.';
-      setError(message);
+      setEditError(message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const token = getToken();
+    if (!token) return;
+    setCreating(true);
+    setError('');
+    setCreateError('');
+    try {
+      const gyms = createForm.gyms
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const response = await fetch(`${apiBaseUrl}/admin/users`, {
+        method: 'POST',
+        headers: getApiHeaders({ token, json: true }),
+        body: JSON.stringify({
+          role: 'TEACHER',
+          dni: createForm.dni.trim(),
+          password: createForm.password.trim(),
+          firstName: createForm.firstName.trim(),
+          lastName: createForm.lastName.trim(),
+          email: createForm.email.trim(),
+          phone: createForm.phone.trim(),
+          birthDate: createForm.birthDate.trim(),
+          address: createForm.address.trim(),
+          gyms,
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message ?? 'No se pudo crear el profesor.');
+      }
+      setCreateOpen(false);
+      setCreateForm(emptyCreateForm);
+      await loadTeachers();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'No se pudo crear el profesor.';
+      setCreateError(message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDelete = async (teacher: AdminTeacher) => {
+    if (!confirm(`Eliminar profesor ${teacher.firstName} ${teacher.lastName}?`)) {
+      return;
+    }
+    const token = getToken();
+    if (!token) return;
+    setError('');
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/admin/teachers/${teacher.id}`,
+        {
+          method: 'DELETE',
+          headers: getApiHeaders({ token }),
+        },
+      );
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message ?? 'No se pudo eliminar el profesor.');
+      }
+      await loadTeachers();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'No se pudo eliminar el profesor.';
+      setError(message);
     }
   };
 
@@ -163,6 +251,14 @@ export function AdminTeachers() {
           <h1 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">
             Editar profesores
           </h1>
+          <button
+            className="flex size-10 items-center justify-center"
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            aria-label="Crear profesor"
+          >
+            <span className="material-symbols-outlined">person_add</span>
+          </button>
         </div>
       </header>
 
@@ -218,13 +314,22 @@ export function AdminTeachers() {
                   )}
                 </div>
               </div>
-              <button
-                className="rounded-lg bg-primary text-white text-xs font-semibold px-3 py-2"
-                type="button"
-                onClick={() => openEdit(teacher)}
-              >
-                Editar
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  className="rounded-lg bg-primary text-white text-xs font-semibold px-3 py-2"
+                  type="button"
+                  onClick={() => openEdit(teacher)}
+                >
+                  Editar
+                </button>
+                <button
+                  className="rounded-lg border border-red-200 text-red-600 text-xs font-semibold px-3 py-2"
+                  type="button"
+                  onClick={() => handleDelete(teacher)}
+                >
+                  Eliminar
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -244,6 +349,11 @@ export function AdminTeachers() {
               </button>
             </div>
             <form className="space-y-3" onSubmit={handleSave}>
+              {editError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {editError}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <input
                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -309,6 +419,141 @@ export function AdminTeachers() {
                 disabled={saving}
               >
                 {saving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {createOpen && (
+        <div className="fixed inset-0 bg-black/40 z-30 flex items-end justify-center">
+          <div className="bg-white w-full max-w-[430px] rounded-t-2xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">Nuevo profesor</h2>
+              <button
+                className="text-gray-400"
+                type="button"
+                onClick={() => setCreateOpen(false)}
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <form className="space-y-3" onSubmit={handleCreate}>
+              {createError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {createError}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  placeholder="Nombre"
+                  value={createForm.firstName}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      firstName: event.target.value,
+                    }))
+                  }
+                  required
+                />
+                <input
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  placeholder="Apellido"
+                  value={createForm.lastName}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      lastName: event.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+              <input
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                placeholder="DNI (solo numeros)"
+                inputMode="numeric"
+                value={createForm.dni}
+                onChange={(event) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    dni: event.target.value.replace(/\D/g, ''),
+                  }))
+                }
+                required
+              />
+              <input
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                placeholder="Email"
+                type="email"
+                value={createForm.email}
+                onChange={(event) =>
+                  setCreateForm((prev) => ({ ...prev, email: event.target.value }))
+                }
+                required
+              />
+              <input
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                placeholder="Telefono"
+                value={createForm.phone}
+                onChange={(event) =>
+                  setCreateForm((prev) => ({ ...prev, phone: event.target.value }))
+                }
+                required
+              />
+              <input
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                type="date"
+                value={createForm.birthDate}
+                onChange={(event) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    birthDate: event.target.value,
+                  }))
+                }
+                required
+              />
+              <input
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                placeholder="Direccion"
+                value={createForm.address}
+                onChange={(event) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    address: event.target.value,
+                  }))
+                }
+                required
+              />
+              <input
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                placeholder="Gimnasios (separados por coma)"
+                value={createForm.gyms}
+                onChange={(event) =>
+                  setCreateForm((prev) => ({ ...prev, gyms: event.target.value }))
+                }
+                required
+              />
+              <input
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                placeholder="Contraseña"
+                type="password"
+                value={createForm.password}
+                onChange={(event) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    password: event.target.value,
+                  }))
+                }
+                required
+              />
+              <button
+                className="w-full rounded-lg bg-primary text-white text-sm font-semibold py-3 disabled:opacity-70"
+                type="submit"
+                disabled={creating}
+              >
+                {creating ? 'Creando...' : 'Crear profesor'}
               </button>
             </form>
           </div>

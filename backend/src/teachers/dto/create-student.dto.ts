@@ -1,4 +1,4 @@
-import { IsDateString, IsEmail, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsDateString, IsEmail, IsString, Length, Matches } from 'class-validator';
 
 export class CreateStudentDto {
   @IsString()
@@ -6,10 +6,9 @@ export class CreateStudentDto {
   @Matches(/^\d+$/, { message: 'El DNI debe contener solo numeros.' })
   dni: string;
 
-  @IsOptional()
   @IsString()
   @Length(6, 64)
-  password?: string;
+  password: string;
 
   @IsString()
   @Length(1, 60)
@@ -22,26 +21,22 @@ export class CreateStudentDto {
   @IsEmail()
   email: string;
 
-  @IsOptional()
   @IsString()
   @Length(6, 30)
-  phone?: string;
+  phone: string;
 
-  @IsOptional()
   @IsString()
   @Length(6, 30)
-  guardianPhone?: string;
+  guardianPhone: string;
 
   @IsString()
   @Length(2, 80)
   gym: string;
 
-  @IsOptional()
   @IsDateString()
-  birthDate?: string;
+  birthDate: string;
 
-  @IsOptional()
   @IsString()
   @Length(3, 120)
-  address?: string;
+  address: string;
 }

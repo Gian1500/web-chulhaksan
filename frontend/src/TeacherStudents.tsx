@@ -23,6 +23,8 @@ type CreateStudentForm = {
   phone: string;
   guardianPhone: string;
   gym: string;
+  birthDate: string;
+  address: string;
   password: string;
 };
 
@@ -34,6 +36,8 @@ const emptyForm: CreateStudentForm = {
   phone: '',
   guardianPhone: '',
   gym: '',
+  birthDate: '',
+  address: '',
   password: '',
 };
 
@@ -47,6 +51,7 @@ export function TeacherStudents() {
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState<CreateStudentForm>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   const loadStudents = async () => {
     const token = getToken();
@@ -198,6 +203,7 @@ export function TeacherStudents() {
     if (!token) return;
     setSaving(true);
     setError('');
+    setCreateError('');
     try {
       const response = await fetch(`${apiBaseUrl}/teachers/me/students`, {
         method: 'POST',
@@ -218,7 +224,7 @@ export function TeacherStudents() {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'No se pudo crear el alumno.';
-      setError(message);
+      setCreateError(message);
     } finally {
       setSaving(false);
     }
@@ -413,6 +419,11 @@ export function TeacherStudents() {
               </button>
             </div>
             <form className="space-y-3" onSubmit={handleCreateStudent}>
+              {createError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {createError}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <input
                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -467,6 +478,24 @@ export function TeacherStudents() {
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                type="date"
+                value={form.birthDate}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, birthDate: event.target.value }))
+                }
+                required
+              />
+              <input
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                placeholder="Direccion"
+                value={form.address}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, address: event.target.value }))
+                }
+                required
+              />
+              <input
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                 placeholder="Telefono del alumno"
                 value={form.phone}
                 onChange={(event) =>
@@ -488,7 +517,7 @@ export function TeacherStudents() {
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Contrasena"
+                placeholder="Contraseña"
                 type="password"
                 value={form.password}
                 onChange={(event) =>
