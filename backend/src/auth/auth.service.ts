@@ -6,7 +6,6 @@ import {
 import { UserRole, UserStatus } from '@prisma/client';
 import { compare, hash } from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
-import type { StringValue } from 'jsonwebtoken';
 import { PrismaService } from '../prisma/prisma.service';
 import { normalizeDni } from '../normalize';
 import { LoginDto } from './dto/login.dto';
@@ -19,7 +18,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  private getAccessExpiresIn(): StringValue | number {
+  private getAccessExpiresIn(): string | number {
     return this.asJwtExpires(process.env.JWT_ACCESS_EXPIRES_IN ?? '15m');
   }
 
@@ -27,11 +26,11 @@ export class AuthService {
     return process.env.JWT_REFRESH_SECRET ?? process.env.JWT_SECRET ?? '';
   }
 
-  private getRefreshExpiresIn(): StringValue | number {
+  private getRefreshExpiresIn(): string | number {
     return this.asJwtExpires(process.env.JWT_REFRESH_EXPIRES_IN ?? '7d');
   }
 
-  private asJwtExpires(value: string): StringValue | number {
+  private asJwtExpires(value: string): string | number {
     const raw = value.trim();
     if (!raw) return '15m';
     if (/^\d+$/.test(raw)) return Number(raw);
@@ -67,12 +66,12 @@ export class AuthService {
     role: UserRole;
   }) {
     const accessToken = await this.jwtService.signAsync(payload, {
-      expiresIn: this.getAccessExpiresIn(),
+      expiresIn: this.getAccessExpiresIn() as any,
     });
     const refreshExpiresIn = this.getRefreshExpiresIn();
     const refreshToken = await this.jwtService.signAsync(payload, {
       secret: this.getRefreshSecret(),
-      expiresIn: refreshExpiresIn,
+      expiresIn: refreshExpiresIn as any,
     });
     const refreshExpiresAt = new Date(
       Date.now() +
