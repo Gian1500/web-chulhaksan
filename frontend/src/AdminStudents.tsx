@@ -259,19 +259,19 @@ export function AdminStudents() {
       const response = await fetch(`${apiBaseUrl}/admin/users`, {
         method: 'POST',
         headers: getApiHeaders({ token, json: true }),
-        body: JSON.stringify({
-          role: 'STUDENT',
-          dni: createForm.dni.trim(),
-          password: createForm.password.trim(),
-          firstName: createForm.firstName.trim(),
-          lastName: createForm.lastName.trim(),
-          email: createForm.email.trim(),
-          phone: createForm.phone.trim(),
-          guardianPhone: createForm.guardianPhone.trim(),
-          gym: createForm.gym.trim(),
-          birthDate: createForm.birthDate.trim(),
-          address: createForm.address.trim(),
-        }),
+          body: JSON.stringify({
+            role: 'STUDENT',
+            dni: createForm.dni.trim(),
+            password: createForm.password.trim(),
+            firstName: createForm.firstName.trim(),
+            lastName: createForm.lastName.trim(),
+            email: createForm.email.trim() || null,
+            phone: createForm.phone.trim(),
+            guardianPhone: createForm.guardianPhone.trim(),
+            gym: createForm.gym.trim(),
+            birthDate: createForm.birthDate.trim(),
+            address: createForm.address.trim() || null,
+          }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
@@ -525,6 +525,7 @@ export function AdminStudents() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, firstName: event.target.value }))
                   }
+                  required
                 />
                 <input
                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -533,6 +534,7 @@ export function AdminStudents() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, lastName: event.target.value }))
                   }
+                  required
                 />
               </div>
               <input
@@ -544,30 +546,33 @@ export function AdminStudents() {
                   setForm((prev) => ({ ...prev, email: event.target.value }))
                 }
               />
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Teléfono"
-                value={form.phone}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, phone: event.target.value }))
-                }
-              />
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Teléfono tutor"
-                value={form.guardianPhone}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, guardianPhone: event.target.value }))
-                }
-              />
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Gimnasio"
-                value={form.gym}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, gym: event.target.value }))
-                }
-              />
+                <input
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  placeholder="Teléfono"
+                  value={form.phone}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, phone: event.target.value }))
+                  }
+                  required
+                />
+                <input
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  placeholder="Teléfono tutor"
+                  value={form.guardianPhone}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, guardianPhone: event.target.value }))
+                  }
+                  required
+                />
+                <input
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  placeholder="Gimnasio"
+                  value={form.gym}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, gym: event.target.value }))
+                  }
+                  required
+                />
               <div className="relative">
                 <input
                   className="peer w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -577,6 +582,7 @@ export function AdminStudents() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, birthDate: event.target.value }))
                   }
+                  required
                 />
                 <div className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] text-gray-500 opacity-0 shadow-sm transition-opacity peer-focus:opacity-100">
                   Seleccioná la fecha de nacimiento
@@ -714,7 +720,6 @@ export function AdminStudents() {
                 onChange={(event) =>
                   setCreateForm((prev) => ({ ...prev, email: event.target.value }))
                 }
-                required
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -774,7 +779,6 @@ export function AdminStudents() {
                     address: event.target.value,
                   }))
                 }
-                required
               />
               <div className="relative">
                 <input

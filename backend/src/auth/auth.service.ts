@@ -21,13 +21,13 @@ export class AuthService {
     const normalizedDni = normalizeDni(dto.dni);
     if (
       dto.role === UserRole.STUDENT &&
-      (!dto.birthDate || !dto.address || !dto.email || !dto.phone)
+      (!dto.birthDate || !dto.phone || !dto.guardianPhone || !dto.gym)
     ) {
       throw new BadRequestException(
         'Faltan datos obligatorios del alumno.',
       );
     }
-    if (dto.role === UserRole.TEACHER && (!dto.email || !dto.phone)) {
+    if (dto.role === UserRole.TEACHER && !dto.phone) {
       throw new BadRequestException(
         'Faltan datos obligatorios del profesor.',
       );

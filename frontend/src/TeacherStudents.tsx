@@ -214,6 +214,8 @@ export function TeacherStudents() {
         body: JSON.stringify({
           ...form,
           dni: sanitizeDni(form.dni),
+          email: form.email.trim() || null,
+          address: form.address.trim() || null,
           password: form.password || undefined,
         }),
       });
@@ -467,7 +469,6 @@ export function TeacherStudents() {
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, email: event.target.value }))
                 }
-                required
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -500,7 +501,6 @@ export function TeacherStudents() {
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, address: event.target.value }))
                 }
-                required
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"

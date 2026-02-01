@@ -316,6 +316,14 @@ export class PaymentsService {
       return null;
     }
     const data = raw as Record<string, any>;
+    if (data.manual && data.method === 'cash') {
+      return {
+        id: 'cash',
+        name: 'Efectivo',
+        type: 'cash',
+        last4: null,
+      };
+    }
     const paymentMethod = data.payment_method ?? null;
     const card = data.card ?? null;
 
