@@ -202,6 +202,7 @@ export class TeachersService {
           passwordHash,
           role: UserRole.STUDENT,
           status: UserStatus.ACTIVE,
+          mustChangePassword: true,
         },
       });
 
@@ -281,6 +282,50 @@ export class TeachersService {
     });
 
     return { deleted: true };
+  }
+
+  async resetStudentPassword(userId: string, studentDni: string) {
+    const normalizedDni = normalizeDni(studentDni);
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!teacher) {
+      throw new NotFoundException('Profesor no encontrado.');
+    }
+
+    const student = await this.prisma.student.findUnique({
+      where: { dni: normalizedDni },
+      select: { dni: true, userId: true },
+    });
+
+    if (!student) {
+      throw new NotFoundException('Alumno no encontrado.');
+    }
+
+    const assignment = await this.prisma.studentTeacherAssignment.findFirst({
+      where: {
+        studentDni: normalizedDni,
+        teacherId: teacher.id,
+        active: true,
+      },
+      select: { id: true },
+    });
+
+    if (!assignment) {
+      throw new BadRequestException('El alumno no está asignado a este profesor.');
+    }
+
+    const temporaryPassword = `CHS-${randomBytes(4).toString('hex')}`;
+    const passwordHash = await hash(temporaryPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: student.userId },
+      data: { passwordHash, mustChangePassword: true },
+    });
+
+    return { temporaryPassword };
   }
 
   getMpConnectUrl(userId: string) {

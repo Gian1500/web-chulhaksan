@@ -31,6 +31,11 @@ export class AdminController {
     return this.adminService.updateUserStatus(id, dto);
   }
 
+  @Post('users/:id/reset-password')
+  resetPassword(@Param('id') id: string) {
+    return this.adminService.resetUserPassword(id);
+  }
+
   @Get('students')
   listStudents() {
     return this.adminService.listStudents();

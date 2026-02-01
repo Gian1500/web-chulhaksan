@@ -5,6 +5,7 @@ import { ListUsersDto } from './dto/list-users.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UserRole, UserStatus } from '@prisma/client';
 import { hash } from 'bcryptjs';
+import { randomBytes } from 'crypto';
 import { normalizeDni } from '../normalize';
 import { UpdateStudentDto } from '../students/dto/update-student.dto';
 import { UpdateTeacherDto } from '../teachers/dto/update-teacher.dto';
@@ -83,6 +84,7 @@ export class AdminService {
           passwordHash,
           role: dto.role,
           status: UserStatus.ACTIVE,
+          mustChangePassword: true,
         },
       });
 
@@ -140,6 +142,26 @@ export class AdminService {
       where: { id: userId },
       data: { status: dto.status },
     });
+  }
+
+  async resetUserPassword(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
+
+    const temporaryPassword = `CHS-${randomBytes(4).toString('hex')}`;
+    const passwordHash = await hash(temporaryPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, mustChangePassword: true },
+    });
+
+    return { temporaryPassword };
   }
 
   async listStudents() {

@@ -86,6 +86,9 @@ export function AdminStudents() {
   const [createError, setCreateError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [editError, setEditError] = useState('');
+  const [resetInfo, setResetInfo] = useState('');
+  const [resetting, setResetting] = useState(false);
+  const [copiedReset, setCopiedReset] = useState(false);
 
   const loadStudents = async () => {
     const token = getToken();
@@ -176,6 +179,7 @@ export function AdminStudents() {
     });
     setAssignedTeacherId(currentTeacherId);
     setInitialTeacherId(currentTeacherId);
+    setResetInfo('');
   };
 
   const buildPayload = () => ({
@@ -232,6 +236,7 @@ export function AdminStudents() {
       setForm(emptyForm);
       setAssignedTeacherId('');
       setInitialTeacherId('');
+      setResetInfo('');
       setCreateAssignedTeacherId('');
       await loadStudents();
     } catch (err) {
@@ -329,6 +334,64 @@ export function AdminStudents() {
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!editing?.user?.id) {
+      setEditError('No se pudo identificar el usuario.');
+      return;
+    }
+    if (!confirm('¿Querés resetear la contraseña de este alumno?')) return;
+    const token = getToken();
+    if (!token) return;
+    setResetting(true);
+    setEditError('');
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/admin/users/${editing.user.id}/reset-password`,
+        {
+          method: 'POST',
+          headers: getApiHeaders({ token }),
+        },
+      );
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message ?? 'No se pudo resetear la contraseña.');
+      }
+      const data = (await response.json()) as { temporaryPassword?: string };
+      if (!data?.temporaryPassword) {
+        throw new Error('No se recibió la contraseña temporal.');
+      }
+      setResetInfo(data.temporaryPassword);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'No se pudo resetear la contraseña.';
+      setEditError(message);
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const handleCopyReset = async () => {
+    if (!resetInfo) return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(resetInfo);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = resetInfo;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopiedReset(true);
+      setTimeout(() => setCopiedReset(false), 1500);
+    } catch {
+      setCopiedReset(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background-light text-[#1b0d0d]">
       <header className="sticky top-0 z-10 bg-background-light/80 backdrop-blur-md border-b border-gray-200">
@@ -340,7 +403,7 @@ export function AdminStudents() {
             <span className="material-symbols-outlined">arrow_back_ios</span>
           </Link>
           <h1 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">
-            Editar alumnos
+            Gestión de alumnos
           </h1>
           <button
             className="flex size-10 items-center justify-center"
@@ -442,6 +505,7 @@ export function AdminStudents() {
                   setForm(emptyForm);
                   setAssignedTeacherId('');
                   setInitialTeacherId('');
+                  setResetInfo('');
                 }}
               >
                 <span className="material-symbols-outlined">close</span>
@@ -540,6 +604,33 @@ export function AdminStudents() {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="rounded-lg border border-gray-100 bg-background-light p-3 space-y-2">
+                <p className="text-xs text-gray-500">Contraseña del alumno</p>
+                <button
+                  className="w-full rounded-lg border border-gray-200 text-sm font-semibold py-2 disabled:opacity-70"
+                  type="button"
+                  onClick={handleResetPassword}
+                  disabled={resetting}
+                >
+                  {resetting ? 'Reseteando...' : 'Resetear contraseña'}
+                </button>
+                {resetInfo && (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 flex items-center justify-between gap-2">
+                    <span>Temporal: {resetInfo}</span>
+                    <button
+                      className={`text-xs font-semibold transition-all ${
+                        copiedReset
+                          ? 'text-green-700 bg-green-100 px-2 py-1 rounded-md scale-[1.03]'
+                          : 'text-amber-700'
+                      }`}
+                      type="button"
+                      onClick={handleCopyReset}
+                    >
+                      {copiedReset ? 'Copiado' : 'Copiar'}
+                    </button>
+                  </div>
+                )}
               </div>
               <button
                 className="w-full rounded-lg bg-primary text-white text-sm font-semibold py-3 disabled:opacity-70"

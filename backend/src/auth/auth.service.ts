@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -115,6 +115,59 @@ export class AuthService {
     const payload = { sub: user.id, dni: user.dni, role: user.role };
     const accessToken = await this.jwtService.signAsync(payload);
 
-    return { accessToken };
+    return { accessToken, mustChangePassword: user.mustChangePassword };
+  }
+
+  async getMe(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, dni: true, role: true, mustChangePassword: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
+
+    return {
+      sub: user.id,
+      dni: user.dni,
+      role: user.role,
+      mustChangePassword: user.mustChangePassword,
+    };
+  }
+
+  async changePassword(
+    userId: string,
+    data: { currentPassword?: string; newPassword: string },
+  ) {
+    if (!data.newPassword?.trim()) {
+      throw new BadRequestException('La nueva contraseña es obligatoria.');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, passwordHash: true, mustChangePassword: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
+
+    if (data.currentPassword?.trim()) {
+      const isValid = await compare(data.currentPassword, user.passwordHash);
+      if (!isValid) {
+        throw new BadRequestException('La contraseña actual no es válida.');
+      }
+    } else if (!user.mustChangePassword) {
+      throw new BadRequestException('Debes ingresar la contraseña actual.');
+    }
+
+    const passwordHash = await hash(data.newPassword.trim(), 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, mustChangePassword: false },
+    });
+
+    return { changed: true };
   }
 }

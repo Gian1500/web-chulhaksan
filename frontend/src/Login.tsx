@@ -18,8 +18,12 @@ export function Login() {
 
     try {
       const token = await login(dni.trim(), password);
-      await fetchMe(token);
-      navigate('/dashboard');
+      const profile = await fetchMe(token);
+      if (profile?.mustChangePassword) {
+        navigate('/cambiar-contrasena');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       const message =
         err instanceof Error

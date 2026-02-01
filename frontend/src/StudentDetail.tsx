@@ -53,6 +53,9 @@ export function StudentDetail() {
   const [actionLoading, setActionLoading] = useState<'unassign' | 'delete' | null>(
     null,
   );
+  const [resetInfo, setResetInfo] = useState('');
+  const [resetting, setResetting] = useState(false);
+  const [copiedReset, setCopiedReset] = useState(false);
 
   useEffect(() => {
     const token = getToken();
@@ -192,6 +195,60 @@ export function StudentDetail() {
     }
   };
 
+  const handleResetPassword = async () => {
+    const token = getToken();
+    if (!token || !dni) return;
+    if (!confirm('¿Querés resetear la contraseña de este alumno?')) return;
+    setResetting(true);
+    setError('');
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/teachers/me/students/${dni}/reset-password`,
+        {
+          method: 'POST',
+          headers: getApiHeaders({ token }),
+        },
+      );
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message ?? 'No se pudo resetear la contraseña.');
+      }
+      const data = (await response.json()) as { temporaryPassword?: string };
+      if (!data?.temporaryPassword) {
+        throw new Error('No se recibió la contraseña temporal.');
+      }
+      setResetInfo(data.temporaryPassword);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'No se pudo resetear la contraseña.';
+      setError(message);
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const handleCopyReset = async () => {
+    if (!resetInfo) return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(resetInfo);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = resetInfo;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopiedReset(true);
+      setTimeout(() => setCopiedReset(false), 1500);
+    } catch {
+      setCopiedReset(false);
+    }
+  };
+
   return (
     <div className="relative flex h-auto min-h-screen w-full flex-col max-w-[480px] mx-auto overflow-x-hidden border-x border-gray-200 bg-background-light text-[#1b0d0d]">
       <div className="sticky top-0 z-10 flex items-center bg-background-light/90 backdrop-blur-md p-4 pb-2 justify-between border-b border-gray-100">
@@ -325,6 +382,30 @@ export function StudentDetail() {
                   ? 'Desasignando...'
                   : 'Desasignar alumno'}
               </button>
+              <button
+                className="w-full rounded-lg border border-gray-200 text-sm font-semibold py-2.5 text-[#1b0d0d] disabled:opacity-70"
+                type="button"
+                onClick={handleResetPassword}
+                disabled={resetting}
+              >
+                {resetting ? 'Reseteando...' : 'Resetear contraseña'}
+              </button>
+              {resetInfo && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 flex items-center justify-between gap-2">
+                  <span>Temporal: {resetInfo}</span>
+                  <button
+                    className={`text-xs font-semibold transition-all ${
+                      copiedReset
+                        ? 'text-green-700 bg-green-100 px-2 py-1 rounded-md scale-[1.03]'
+                        : 'text-amber-700'
+                    }`}
+                    type="button"
+                    onClick={handleCopyReset}
+                  >
+                    {copiedReset ? 'Copiado' : 'Copiar'}
+                  </button>
+                </div>
+              )}
               <button
                 className="w-full rounded-lg bg-red-600 text-white text-sm font-semibold py-2.5 disabled:opacity-70"
                 type="button"

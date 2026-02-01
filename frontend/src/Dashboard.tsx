@@ -403,9 +403,9 @@ export function Dashboard() {
           <section className="space-y-4">
             <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
               <p className="text-sm font-bold">Acceso rápido</p>
-              <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="mt-4 grid grid-cols-2 gap-3 items-stretch">
                 <Link
-                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
+                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light h-full"
                   to="/admin/alumnos"
                 >
                   <span className="material-symbols-outlined text-primary">group</span>
@@ -413,29 +413,23 @@ export function Dashboard() {
                   <span className="text-xs text-gray-500">Gestión total</span>
                 </Link>
                 <Link
-                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
+                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light h-full"
                   to="/admin/profesores"
                 >
                   <span className="material-symbols-outlined text-primary">badge</span>
                   <span className="text-sm font-semibold">Profesores</span>
                   <span className="text-xs text-gray-500">Gestión total</span>
                 </Link>
-                <Link
-                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
-                  to="/perfil"
-                >
-                  <span className="material-symbols-outlined text-primary">shield</span>
-                  <span className="text-sm font-semibold">Perfil</span>
-                  <span className="text-xs text-gray-500">Datos personales</span>
-                </Link>
-                <div className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light">
-                  <span className="material-symbols-outlined text-primary">
-                    calendar_month
-                  </span>
-                  <span className="text-sm font-semibold">Generar cuotas</span>
-                  <span className="text-xs text-gray-500">
-                    Mensualidades del mes
-                  </span>
+                <div className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light h-full justify-between">
+                  <div className="flex flex-col gap-2">
+                    <span className="material-symbols-outlined text-primary">
+                      calendar_month
+                    </span>
+                    <span className="text-sm font-semibold">Generar cuotas</span>
+                    <span className="text-xs text-gray-500">
+                      Mensualidades del mes
+                    </span>
+                  </div>
                   <button
                     className="mt-2 w-full rounded-lg bg-primary text-white text-xs font-semibold py-2 disabled:opacity-70"
                     type="button"
@@ -448,28 +442,30 @@ export function Dashboard() {
                     <span className="text-[11px] text-gray-500">{feeMessage}</span>
                   )}
                 </div>
-                <div className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light">
-                  <span className="material-symbols-outlined text-primary">
-                    payments
-                  </span>
-                  <span className="text-sm font-semibold">Cuota global</span>
-                  <span className="text-xs text-gray-500">
-                    Monto mensual base
-                  </span>
-                  <div className="flex gap-2">
-                    <input
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                      type="text"
-                      value={feeAmount}
-                      onChange={(event) => setFeeAmount(event.target.value)}
-                      placeholder="Ej: 7500"
-                    />
-                    <input
-                      className="w-16 rounded-lg border border-gray-200 px-2 py-2 text-sm text-center"
-                      type="text"
-                      value={feeCurrency}
-                      onChange={(event) => setFeeCurrency(event.target.value)}
-                    />
+                <div className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light h-full justify-between">
+                  <div className="flex flex-col gap-2">
+                    <span className="material-symbols-outlined text-primary">
+                      payments
+                    </span>
+                    <span className="text-sm font-semibold">Cuota global</span>
+                    <span className="text-xs text-gray-500">
+                      Monto mensual base
+                    </span>
+                    <div className="flex gap-2">
+                      <input
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                        type="text"
+                        value={feeAmount}
+                        onChange={(event) => setFeeAmount(event.target.value)}
+                        placeholder="Ej: 7500"
+                      />
+                      <input
+                        className="w-16 rounded-lg border border-gray-200 px-2 py-2 text-sm text-center"
+                        type="text"
+                        value={feeCurrency}
+                        onChange={(event) => setFeeCurrency(event.target.value)}
+                      />
+                    </div>
                   </div>
                   <button
                     className="mt-2 w-full rounded-lg bg-primary text-white text-xs font-semibold py-2 disabled:opacity-70"

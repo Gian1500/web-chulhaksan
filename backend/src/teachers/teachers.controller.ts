@@ -53,6 +53,12 @@ export class TeachersController {
     return this.teachersService.deleteStudent(req['user'].sub, dni);
   }
 
+  @Post('me/students/:dni/reset-password')
+  @Roles(UserRole.TEACHER)
+  resetStudentPassword(@Req() req: Request, @Param('dni') dni: string) {
+    return this.teachersService.resetStudentPassword(req['user'].sub, dni);
+  }
+
   @Get(':id')
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   getById(@Param('id') id: string) {

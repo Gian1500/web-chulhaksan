@@ -18,9 +18,18 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  changePassword(
+    @Req() req: Request,
+    @Body() body: { currentPassword?: string; newPassword: string },
+  ) {
+    return this.authService.changePassword(req['user'].sub, body);
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   me(@Req() req: Request) {
-    return req['user'];
+    return this.authService.getMe(req['user'].sub);
   }
 }
