@@ -137,22 +137,10 @@ export function Login() {
             </button>
           </div>
 
-          <div className="flex justify-center mt-2">
-            <Link
-              className="text-primary text-[15px] font-medium hover:opacity-80 transition-opacity flex items-center gap-1"
-              to="/recuperar"
-            >
-              ¿Olvidó su contraseña?
-            </Link>
-          </div>
         </form>
       </div>
 
-      <div className="pb-10 pt-4 text-center">
-        <div className="mt-8 flex justify-center">
-          <div className="w-32 h-1.5 bg-slate-200 rounded-full" />
-        </div>
-      </div>
+      <div className="pb-10 pt-4 text-center" />
     </div>
   );
 }

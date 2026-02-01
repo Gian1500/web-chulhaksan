@@ -257,7 +257,7 @@ export class PaymentsService {
       mpPayment.metadata?.feeId ?? mpPayment.external_reference ?? null;
 
     if (!feeId) {
-      throw new BadRequestException('No se encontro feeId en el pago.');
+      throw new BadRequestException('No se encontró feeId en el pago.');
     }
 
     return this.upsertPaymentFromWebhook({

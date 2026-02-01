@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { TeachersService } from './teachers.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -45,6 +45,12 @@ export class TeachersController {
   @Roles(UserRole.TEACHER)
   unassignStudent(@Req() req: Request, @Param('dni') dni: string) {
     return this.teachersService.unassignStudent(req['user'].sub, dni);
+  }
+
+  @Delete('me/students/:dni')
+  @Roles(UserRole.TEACHER)
+  deleteStudent(@Req() req: Request, @Param('dni') dni: string) {
+    return this.teachersService.deleteStudent(req['user'].sub, dni);
   }
 
   @Get(':id')

@@ -32,6 +32,7 @@ type CreateTeacherForm = TeacherForm & {
   password: string;
 };
 
+
 const emptyForm: TeacherForm = {
   firstName: '',
   lastName: '',
@@ -60,12 +61,13 @@ export function AdminTeachers() {
   const [createForm, setCreateForm] = useState<CreateTeacherForm>(emptyCreateForm);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [editError, setEditError] = useState('');
 
   const loadTeachers = async () => {
     const token = getToken();
     if (!token) {
-      setError('Inicia sesion como admin.');
+      setError('Iniciá sesión como admin.');
       setLoading(false);
       return;
     }
@@ -374,7 +376,7 @@ export function AdminTeachers() {
               </div>
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Email"
+                placeholder="Correo electrónico"
                 type="email"
                 value={form.email}
                 onChange={(event) =>
@@ -383,23 +385,29 @@ export function AdminTeachers() {
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Telefono"
+                placeholder="Teléfono"
                 value={form.phone}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, phone: event.target.value }))
                 }
               />
+              <div className="relative">
+                <input
+                  className="peer w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  type="date"
+                  placeholder="Fecha de nacimiento"
+                  value={form.birthDate}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, birthDate: event.target.value }))
+                  }
+                />
+                <div className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] text-gray-500 opacity-0 shadow-sm transition-opacity peer-focus:opacity-100">
+                  Seleccioná la fecha de nacimiento
+                </div>
+              </div>
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                type="date"
-                value={form.birthDate}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, birthDate: event.target.value }))
-                }
-              />
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Direccion"
+                placeholder="Dirección"
                 value={form.address}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, address: event.target.value }))
@@ -485,7 +493,7 @@ export function AdminTeachers() {
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Email"
+                placeholder="Correo electrónico"
                 type="email"
                 value={createForm.email}
                 onChange={(event) =>
@@ -495,28 +503,34 @@ export function AdminTeachers() {
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Telefono"
+                placeholder="Teléfono"
                 value={createForm.phone}
                 onChange={(event) =>
                   setCreateForm((prev) => ({ ...prev, phone: event.target.value }))
                 }
                 required
               />
+              <div className="relative">
+                <input
+                  className="peer w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  type="date"
+                  placeholder="Fecha de nacimiento"
+                  value={createForm.birthDate}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      birthDate: event.target.value,
+                    }))
+                  }
+                  required
+                />
+                <div className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] text-gray-500 opacity-0 shadow-sm transition-opacity peer-focus:opacity-100">
+                  Seleccioná la fecha de nacimiento
+                </div>
+              </div>
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                type="date"
-                value={createForm.birthDate}
-                onChange={(event) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    birthDate: event.target.value,
-                  }))
-                }
-                required
-              />
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Direccion"
+                placeholder="Dirección"
                 value={createForm.address}
                 onChange={(event) =>
                   setCreateForm((prev) => ({
@@ -535,19 +549,31 @@ export function AdminTeachers() {
                 }
                 required
               />
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Contraseña"
-                type="password"
-                value={createForm.password}
-                onChange={(event) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    password: event.target.value,
-                  }))
-                }
-                required
-              />
+              <div className="relative">
+                <input
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm pr-10"
+                  placeholder="Contraseña"
+                  type={showPassword ? 'text' : 'password'}
+                  value={createForm.password}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      password: event.target.value,
+                    }))
+                  }
+                  required
+                />
+                <button
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-400"
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                >
+                  <span className="material-symbols-outlined text-lg">
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
+              </div>
               <button
                 className="w-full rounded-lg bg-primary text-white text-sm font-semibold py-3 disabled:opacity-70"
                 type="submit"

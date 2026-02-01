@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiBaseUrl, getApiHeaders, getToken } from './auth';
 
@@ -12,8 +12,24 @@ type AdminStudent = {
   gym?: string | null;
   birthDate?: string | null;
   address?: string | null;
+  assignments?: {
+    teacher?: {
+      id: string;
+      firstName: string;
+      lastName: string;
+    } | null;
+  }[];
   user?: {
     id: string;
+    status: string;
+  };
+};
+
+type AdminTeacherOption = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  user?: {
     status: string;
   };
 };
@@ -34,6 +50,7 @@ type CreateStudentForm = StudentForm & {
   password: string;
 };
 
+
 const emptyForm: StudentForm = {
   firstName: '',
   lastName: '',
@@ -53,22 +70,27 @@ const emptyCreateForm: CreateStudentForm = {
 
 export function AdminStudents() {
   const [students, setStudents] = useState<AdminStudent[]>([]);
+  const [teachers, setTeachers] = useState<AdminTeacherOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<AdminStudent | null>(null);
   const [form, setForm] = useState<StudentForm>(emptyForm);
+  const [assignedTeacherId, setAssignedTeacherId] = useState('');
+  const [initialTeacherId, setInitialTeacherId] = useState('');
   const [saving, setSaving] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState<CreateStudentForm>(emptyCreateForm);
+  const [createAssignedTeacherId, setCreateAssignedTeacherId] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [editError, setEditError] = useState('');
 
   const loadStudents = async () => {
     const token = getToken();
     if (!token) {
-      setError('Inicia sesion como admin.');
+      setError('Iniciá sesión como admin.');
       setLoading(false);
       return;
     }
@@ -96,8 +118,29 @@ export function AdminStudents() {
     }
   };
 
+  const loadTeachers = async () => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const response = await fetch(`${apiBaseUrl}/admin/teachers`, {
+        headers: getApiHeaders({ token }),
+        cache: 'no-store',
+      });
+      if (!response.ok) {
+        return;
+      }
+      const data =
+        (await response.json()) as AdminTeacherOption[] | { data?: AdminTeacherOption[] };
+      const list = Array.isArray(data) ? data : data?.data ?? [];
+      setTeachers(list);
+    } catch {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     loadStudents();
+    loadTeachers();
   }, []);
 
   const filtered = useMemo(() => {
@@ -109,7 +152,17 @@ export function AdminStudents() {
     });
   }, [students, query]);
 
+  const activeTeachers = useMemo(
+    () =>
+      teachers.filter((teacher) => {
+        if (!teacher.user?.status) return true;
+        return teacher.user.status === 'ACTIVE';
+      }),
+    [teachers],
+  );
+
   const openEdit = (student: AdminStudent) => {
+    const currentTeacherId = student.assignments?.[0]?.teacher?.id ?? '';
     setEditing(student);
     setForm({
       firstName: student.firstName ?? '',
@@ -121,6 +174,8 @@ export function AdminStudents() {
       birthDate: student.birthDate ? student.birthDate.split('T')[0] : '',
       address: student.address ?? '',
     });
+    setAssignedTeacherId(currentTeacherId);
+    setInitialTeacherId(currentTeacherId);
   };
 
   const buildPayload = () => ({
@@ -155,8 +210,29 @@ export function AdminStudents() {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.message ?? 'No se pudo guardar el alumno.');
       }
+      if (assignedTeacherId !== initialTeacherId) {
+        const endpoint = assignedTeacherId
+          ? `${apiBaseUrl}/admin/students/${editing.dni}/assign`
+          : `${apiBaseUrl}/admin/students/${editing.dni}/unassign`;
+        const assignResponse = await fetch(endpoint, {
+          method: 'POST',
+          headers: getApiHeaders({ token, json: !!assignedTeacherId }),
+          body: assignedTeacherId
+            ? JSON.stringify({ teacherId: assignedTeacherId })
+            : undefined,
+        });
+        if (!assignResponse.ok) {
+          const body = await assignResponse.json().catch(() => ({}));
+          throw new Error(
+            body.message ?? 'No se pudo actualizar la asignación del profesor.',
+          );
+        }
+      }
       setEditing(null);
       setForm(emptyForm);
+      setAssignedTeacherId('');
+      setInitialTeacherId('');
+      setCreateAssignedTeacherId('');
       await loadStudents();
     } catch (err) {
       const message =
@@ -196,8 +272,26 @@ export function AdminStudents() {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.message ?? 'No se pudo crear el alumno.');
       }
+      if (createAssignedTeacherId) {
+        const assignResponse = await fetch(
+          `${apiBaseUrl}/admin/students/${createForm.dni.trim()}/assign`,
+          {
+            method: 'POST',
+            headers: getApiHeaders({ token, json: true }),
+            body: JSON.stringify({ teacherId: createAssignedTeacherId }),
+          },
+        );
+        if (!assignResponse.ok) {
+          const body = await assignResponse.json().catch(() => ({}));
+          throw new Error(
+            body.message ??
+              'Alumno creado, pero no se pudo asignar el profesor.',
+          );
+        }
+      }
       setCreateOpen(false);
       setCreateForm(emptyCreateForm);
+      setCreateAssignedTeacherId('');
       await loadStudents();
     } catch (err) {
       const message =
@@ -343,7 +437,12 @@ export function AdminStudents() {
               <button
                 className="text-gray-400"
                 type="button"
-                onClick={() => setEditing(null)}
+                onClick={() => {
+                  setEditing(null);
+                  setForm(emptyForm);
+                  setAssignedTeacherId('');
+                  setInitialTeacherId('');
+                }}
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -374,7 +473,7 @@ export function AdminStudents() {
               </div>
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Email"
+                placeholder="Correo electrónico"
                 type="email"
                 value={form.email}
                 onChange={(event) =>
@@ -383,7 +482,7 @@ export function AdminStudents() {
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Telefono"
+                placeholder="Teléfono"
                 value={form.phone}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, phone: event.target.value }))
@@ -391,7 +490,7 @@ export function AdminStudents() {
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Telefono tutor"
+                placeholder="Teléfono tutor"
                 value={form.guardianPhone}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, guardianPhone: event.target.value }))
@@ -405,22 +504,43 @@ export function AdminStudents() {
                   setForm((prev) => ({ ...prev, gym: event.target.value }))
                 }
               />
+              <div className="relative">
+                <input
+                  className="peer w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  type="date"
+                  placeholder="Fecha de nacimiento"
+                  value={form.birthDate}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, birthDate: event.target.value }))
+                  }
+                />
+                <div className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] text-gray-500 opacity-0 shadow-sm transition-opacity peer-focus:opacity-100">
+                  Seleccioná la fecha de nacimiento
+                </div>
+              </div>
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                type="date"
-                value={form.birthDate}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, birthDate: event.target.value }))
-                }
-              />
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Direccion"
+                placeholder="Dirección"
                 value={form.address}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, address: event.target.value }))
                 }
               />
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">Profesor asignado</label>
+                <select
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                  value={assignedTeacherId}
+                  onChange={(event) => setAssignedTeacherId(event.target.value)}
+                >
+                  <option value="">Sin profesor</option>
+                  {activeTeachers.map((teacher) => (
+                    <option key={teacher.id} value={teacher.id}>
+                      {teacher.firstName} {teacher.lastName}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <button
                 className="w-full rounded-lg bg-primary text-white text-sm font-semibold py-3 disabled:opacity-70"
                 type="submit"
@@ -441,7 +561,11 @@ export function AdminStudents() {
               <button
                 className="text-gray-400"
                 type="button"
-                onClick={() => setCreateOpen(false)}
+                onClick={() => {
+                  setCreateOpen(false);
+                  setCreateForm(emptyCreateForm);
+                  setCreateAssignedTeacherId('');
+                }}
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -493,7 +617,7 @@ export function AdminStudents() {
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Email"
+                placeholder="Correo electrónico"
                 type="email"
                 value={createForm.email}
                 onChange={(event) =>
@@ -503,7 +627,7 @@ export function AdminStudents() {
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Telefono"
+                placeholder="Teléfono"
                 value={createForm.phone}
                 onChange={(event) =>
                   setCreateForm((prev) => ({ ...prev, phone: event.target.value }))
@@ -512,7 +636,7 @@ export function AdminStudents() {
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Telefono tutor"
+                placeholder="Teléfono tutor"
                 value={createForm.guardianPhone}
                 onChange={(event) =>
                   setCreateForm((prev) => ({
@@ -531,21 +655,27 @@ export function AdminStudents() {
                 }
                 required
               />
+              <div className="relative">
+                <input
+                  className="peer w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  type="date"
+                  placeholder="Fecha de nacimiento"
+                  value={createForm.birthDate}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      birthDate: event.target.value,
+                    }))
+                  }
+                  required
+                />
+                <div className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] text-gray-500 opacity-0 shadow-sm transition-opacity peer-focus:opacity-100">
+                  Seleccioná la fecha de nacimiento
+                </div>
+              </div>
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                type="date"
-                value={createForm.birthDate}
-                onChange={(event) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    birthDate: event.target.value,
-                  }))
-                }
-                required
-              />
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Direccion"
+                placeholder="Dirección"
                 value={createForm.address}
                 onChange={(event) =>
                   setCreateForm((prev) => ({
@@ -555,19 +685,46 @@ export function AdminStudents() {
                 }
                 required
               />
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Contraseña"
-                type="password"
-                value={createForm.password}
-                onChange={(event) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    password: event.target.value,
-                  }))
-                }
-                required
-              />
+              <div className="relative">
+                <input
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm pr-10"
+                  placeholder="Contraseña"
+                  type={showPassword ? 'text' : 'password'}
+                  value={createForm.password}
+                  onChange={(event) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      password: event.target.value,
+                    }))
+                  }
+                  required
+                />
+                <button
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-400"
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                >
+                  <span className="material-symbols-outlined text-lg">
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">Profesor asignado</label>
+                <select
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                  value={createAssignedTeacherId}
+                  onChange={(event) => setCreateAssignedTeacherId(event.target.value)}
+                >
+                  <option value="">Sin profesor</option>
+                  {activeTeachers.map((teacher) => (
+                    <option key={teacher.id} value={teacher.id}>
+                      {teacher.firstName} {teacher.lastName}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <button
                 className="w-full rounded-lg bg-primary text-white text-sm font-semibold py-3 disabled:opacity-70"
                 type="submit"

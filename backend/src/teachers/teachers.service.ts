@@ -231,6 +231,58 @@ export class TeachersService {
     });
   }
 
+  async deleteStudent(userId: string, studentDni: string) {
+    const normalizedDni = normalizeDni(studentDni);
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!teacher) {
+      throw new NotFoundException('Profesor no encontrado.');
+    }
+
+    const student = await this.prisma.student.findUnique({
+      where: { dni: normalizedDni },
+      select: { dni: true, userId: true },
+    });
+
+    if (!student) {
+      throw new NotFoundException('Alumno no encontrado.');
+    }
+
+    const assignment = await this.prisma.studentTeacherAssignment.findFirst({
+      where: {
+        studentDni: normalizedDni,
+        teacherId: teacher.id,
+        active: true,
+      },
+      select: { id: true },
+    });
+
+    if (!assignment) {
+      throw new BadRequestException('El alumno no está asignado a este profesor.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.payment.deleteMany({
+        where: { fee: { studentDni: normalizedDni } },
+      });
+      await tx.monthlyFee.deleteMany({ where: { studentDni: normalizedDni } });
+      await tx.attendance.deleteMany({ where: { studentDni: normalizedDni } });
+      await tx.studentTeacherAssignment.deleteMany({
+        where: { studentDni: normalizedDni },
+      });
+      await tx.studentTeacherRequest.deleteMany({
+        where: { studentDni: normalizedDni },
+      });
+      await tx.student.delete({ where: { dni: normalizedDni } });
+      await tx.user.delete({ where: { id: student.userId } });
+    });
+
+    return { deleted: true };
+  }
+
   getMpConnectUrl(userId: string) {
     const clientId = process.env.MP_CLIENT_ID;
     const redirectUri = process.env.MP_OAUTH_REDIRECT_URI;

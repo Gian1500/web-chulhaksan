@@ -41,6 +41,19 @@ export class AdminController {
     return this.adminService.deleteStudent(dni);
   }
 
+  @Post('students/:dni/assign')
+  assignStudent(
+    @Param('dni') dni: string,
+    @Body() body: { teacherId: string },
+  ) {
+    return this.adminService.assignStudentTeacher(dni, body.teacherId);
+  }
+
+  @Post('students/:dni/unassign')
+  unassignStudent(@Param('dni') dni: string) {
+    return this.adminService.unassignStudentTeacher(dni);
+  }
+
   @Patch('students/:dni')
   updateStudent(@Param('dni') dni: string, @Body() dto: UpdateStudentDto) {
     return this.adminService.updateStudent(dni, dto);
