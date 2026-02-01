@@ -38,6 +38,8 @@ export function Dashboard() {
   }, [role]);
 
   const handleLogout = () => {
+    const confirmed = window.confirm('¿Querés cerrar sesión?');
+    if (!confirmed) return;
     clearAuth();
     setProfile(null);
     navigate('/login');

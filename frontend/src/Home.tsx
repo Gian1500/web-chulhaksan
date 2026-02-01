@@ -3,11 +3,15 @@ import { Link } from 'react-router-dom';
 export function Home() {
   return (
     <div className="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden pb-10 bg-background-light text-[#1b0d0d] antialiased">
-      <header className="sticky top-0 z-50 flex items-center bg-background-light/95 backdrop-blur-md p-4 justify-between border-b border-gray-200">
-        <div className="size-10" />
-        <div className="flex flex-col items-center">
-          <span className="text-sm font-bold text-primary tracking-[0.2em] uppercase">
-            Chul Hak San
+      <header className="sticky top-0 z-50 flex items-center bg-background-light/95 backdrop-blur-md px-4 py-3 justify-between border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <img
+            alt="Chul Hak San"
+            className="h-9 w-9 rounded-full bg-white p-0.5 shadow-sm"
+            src="/assets/logo-color.png"
+          />
+          <span className="text-[10px] font-bold text-primary tracking-[0.4em] uppercase">
+            CHS
           </span>
         </div>
         <div className="size-10" />
@@ -37,7 +41,7 @@ export function Home() {
                 className="mt-6 w-full max-w-[220px] bg-primary hover:bg-accent text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 group active:scale-[0.98]"
                 to="/login"
               >
-                <span>Iniciar Sesion</span>
+                <span>Iniciar Sesión</span>
                 <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
                   arrow_forward
                 </span>
@@ -181,38 +185,6 @@ export function Home() {
                 className="mx-auto w-full max-w-[320px]"
               />
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mt-8 px-4 pb-12">
-        <div className="bg-gradient-to-br from-[#1a0d0d] to-[#2a1a1a] text-white p-8 rounded-[2rem] flex flex-col items-center text-center space-y-6 shadow-2xl relative overflow-hidden border border-white/5">
-          <div className="absolute -bottom-10 -right-10 opacity-5">
-            <span className="material-symbols-outlined text-[200px]">
-              sports_martial_arts
-            </span>
-          </div>
-          <div className="z-10 w-full">
-            <div className="mb-4">
-              <p className="text-2xl font-black tracking-widest uppercase text-primary">
-                Chul Hak San
-              </p>
-            </div>
-            <div className="w-16 h-px bg-primary mx-auto mb-6" />
-            <h3 className="text-lg font-bold mb-2">Portal Institucional</h3>
-            <p className="text-sm text-gray-400 mb-8 max-w-[240px] mx-auto">
-              Accede a tu historial académico, grados y material técnico
-              exclusivo de nuestra escuela.
-            </p>
-            <Link
-              className="w-full bg-primary hover:bg-accent text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 group active:scale-[0.98]"
-              to="/login"
-            >
-              <span>INICIAR SESIÓN</span>
-              <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
-                arrow_forward
-              </span>
-            </Link>
           </div>
         </div>
       </section>
