@@ -9,6 +9,7 @@ export type AuthProfile = {
 
 const PROFILE_KEY = 'chulhaksan_profile';
 const LEGACY_TOKEN_KEY = 'chulhaksan_token';
+const ACCESS_TOKEN_KEY = 'chulhaksan_access_token';
 
 export const apiBaseUrl =
   import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
@@ -29,17 +30,27 @@ export function getApiHeaders(options?: { json?: boolean }) {
   return headers;
 }
 
+export function getToken() {
+  return localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+export function setToken(token: string) {
+  localStorage.setItem(ACCESS_TOKEN_KEY, token);
+}
+
 export async function apiFetch(
   input: string,
   init: (RequestInit & { json?: boolean; retry?: boolean }) = {},
 ) {
   const { json, retry = true, ...rest } = init;
   const url = input.startsWith('http') ? input : `${apiBaseUrl}${input}`;
+  const token = getToken();
 
   const response = await fetch(url, {
     ...rest,
     headers: {
       ...getApiHeaders({ json }),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(rest.headers ?? {}),
     },
     credentials: 'include',
@@ -62,6 +73,7 @@ export async function apiFetch(
 export function clearAuth() {
   localStorage.removeItem(PROFILE_KEY);
   localStorage.removeItem(LEGACY_TOKEN_KEY);
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
 }
 
 export function getProfile(): AuthProfile | null {
@@ -92,7 +104,11 @@ export async function login(dni: string, password: string) {
 
   const data = (await response.json()) as {
     mustChangePassword?: boolean;
+    accessToken?: string;
   };
+  if (data?.accessToken) {
+    setToken(data.accessToken);
+  }
   return data;
 }
 
