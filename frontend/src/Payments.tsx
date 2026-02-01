@@ -196,6 +196,23 @@ export function Payments() {
           </span>
         </div>
 
+        <section className="mt-4 px-4">
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+            <div className="flex gap-3">
+              <span className="material-symbols-outlined text-primary">info</span>
+              <div>
+                <p className="text-sm font-bold text-primary">
+                  Información de Cobro
+                </p>
+                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                  Las cuotas vencen el día 10 de cada mes. Desde el día 11 el
+                  importe incluye un recargo fijo de $5000 (no acumulativo).
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <div className="mt-4 px-4 space-y-4">
           {loading && (
             <div className="bg-white rounded-xl p-4 border border-gray-100 text-sm text-gray-600">
@@ -320,29 +337,13 @@ export function Payments() {
           })}
         </div>
 
-        <section className="mt-8 px-4">
-          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
-            <div className="flex gap-3">
-              <span className="material-symbols-outlined text-primary">info</span>
-              <div>
-                <p className="text-sm font-bold text-primary">
-                  Información de Cobro
-                </p>
-                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                  Las cuotas vencen el día 10 de cada mes. Desde el día 11 el
-                  importe incluye un recargo fijo de $5000 (no acumulativo).
-                </p>
-              </div>
-            </div>
-          </div>
-
         <section className="mt-6 px-4 pb-6">
           <h3 className="text-sm font-bold text-[#1b0d0d] mb-3">
             Pagos realizados
           </h3>
           {paymentHistory.length === 0 ? (
             <div className="bg-white rounded-xl p-4 border border-gray-100 text-sm text-gray-600">
-              Todav??a no hay pagos registrados.
+              Todavía no hay pagos registrados.
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-gray-100 overflow-x-auto">
@@ -379,33 +380,7 @@ export function Payments() {
             </div>
           )}
         </section>
-        </section>
       </main>
-
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-200 pb-6 pt-2">
-        <div className="w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto flex justify-around items-center">
-          <Link className="flex flex-col items-center gap-1 text-gray-400" to="/dashboard">
-            <span className="material-symbols-outlined">home</span>
-            <span className="text-[10px] font-medium">Inicio</span>
-          </Link>
-          <button className="flex flex-col items-center gap-1 text-primary" type="button">
-            <span
-              className="material-symbols-outlined"
-              style={{ fontVariationSettings: '"FILL" 1' }}
-            >
-              account_balance_wallet
-            </span>
-            <span className="text-[10px] font-bold">Pagos</span>
-          </button>
-          <Link
-            className="flex flex-col items-center gap-1 text-gray-400"
-            to="/perfil"
-          >
-            <span className="material-symbols-outlined">person</span>
-            <span className="text-[10px] font-medium">Perfil</span>
-          </Link>
-        </div>
-      </nav>
     </div>
   );
 }

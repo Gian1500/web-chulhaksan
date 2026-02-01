@@ -180,18 +180,6 @@ export function StudentProfile() {
       </header>
 
       <main className="w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto pb-24">
-        <section className="px-4 pt-4">
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
-            <div className="h-11 w-11 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-              <span className="material-symbols-outlined">waving_hand</span>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Perfil activo</p>
-              <p className="text-base font-semibold">{`Bienvenido/a ${fullName}`}</p>
-            </div>
-          </div>
-        </section>
-
         <section className="p-4">
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-4">
             <div
