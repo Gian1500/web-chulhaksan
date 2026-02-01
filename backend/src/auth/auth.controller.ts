@@ -88,7 +88,10 @@ export class AuthController {
   ) {
     const result = await this.authService.login(dto);
     this.setAuthCookies(res, result.accessToken, result.refreshToken);
-    return { mustChangePassword: result.mustChangePassword };
+    return {
+      mustChangePassword: result.mustChangePassword,
+      accessToken: result.accessToken,
+    };
   }
 
   @Post('refresh')
