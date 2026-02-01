@@ -236,7 +236,7 @@ export function TeacherStudents() {
   const list = activeTab === 'assigned' ? filteredAssigned : filteredAvailable;
 
   return (
-    <div className="relative flex h-full min-h-screen w-full flex-col max-w-[430px] mx-auto bg-background-light shadow-xl overflow-x-hidden">
+    <div className="relative flex h-full min-h-screen w-full flex-col max-w-[430px] sm:max-w-[560px] md:max-w-[720px] mx-auto bg-background-light shadow-xl overflow-x-hidden">
       <header className="sticky top-0 z-10 flex items-center bg-background-light/80 backdrop-blur-md p-4 pb-2 justify-between">
         <div className="flex items-center gap-2">
           <Link
@@ -275,7 +275,7 @@ export function TeacherStudents() {
         </label>
       </div>
 
-      <div className="flex items-center gap-3 px-4 py-2">
+      <div className="flex flex-wrap items-center gap-3 px-4 py-2">
         <button
           className={`flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full px-5 cursor-pointer shadow-md ${
             activeTab === 'assigned'
@@ -298,7 +298,7 @@ export function TeacherStudents() {
         >
           <p className="text-sm font-semibold leading-normal">Disponibles</p>
         </button>
-        <div className="ml-auto flex h-9 shrink-0 items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-4 text-xs font-semibold text-gray-700 shadow-sm">
+        <div className="sm:ml-auto flex h-9 shrink-0 items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-4 text-xs font-semibold text-gray-700 shadow-sm">
           <span className="material-symbols-outlined text-base">groups</span>
           {activeTab === 'assigned'
             ? `Asignados: ${assignedCount}`
@@ -409,7 +409,7 @@ export function TeacherStudents() {
 
       {createOpen && (
         <div className="fixed inset-0 bg-black/40 z-30 flex items-end justify-center">
-          <div className="bg-white w-full max-w-[430px] rounded-t-2xl p-5">
+          <div className="bg-white w-full max-w-[430px] sm:max-w-[520px] md:max-w-[640px] rounded-t-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">Nuevo alumno</h2>
               <button
@@ -426,7 +426,7 @@ export function TeacherStudents() {
                   {createError}
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   placeholder="Nombre"

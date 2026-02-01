@@ -159,7 +159,7 @@ export function StudentProfile() {
   return (
     <div className="min-h-screen bg-background-light text-[#1b0d0d]">
       <header className="sticky top-0 z-20 bg-background-light/80 backdrop-blur-md border-b border-gray-200">
-        <div className="flex items-center p-4 justify-between max-w-md mx-auto">
+        <div className="flex items-center p-4 justify-between w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto">
           <Link
             className="text-[#1b0d0d] flex size-10 shrink-0 items-center justify-center"
             to="/dashboard"
@@ -179,7 +179,7 @@ export function StudentProfile() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto pb-24">
+      <main className="w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto pb-24">
         <section className="px-4 pt-4">
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
             <div className="h-11 w-11 rounded-full bg-primary/10 text-primary flex items-center justify-center">

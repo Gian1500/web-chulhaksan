@@ -395,7 +395,7 @@ export function AdminStudents() {
   return (
     <div className="min-h-screen bg-background-light text-[#1b0d0d]">
       <header className="sticky top-0 z-10 bg-background-light/80 backdrop-blur-md border-b border-gray-200">
-        <div className="flex items-center p-4 justify-between max-w-md mx-auto">
+        <div className="flex items-center p-4 justify-between w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto">
           <Link
             className="text-[#1b0d0d] flex size-10 shrink-0 items-center justify-center"
             to="/dashboard"
@@ -416,7 +416,7 @@ export function AdminStudents() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto p-4 pb-24 space-y-4">
+      <main className="w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto p-4 pb-24 space-y-4">
         <label className="flex flex-col min-w-40 h-12 w-full">
           <div className="flex w-full flex-1 items-stretch rounded-xl h-full shadow-sm">
             <div className="text-[#9a4c4c] flex border-none bg-white items-center justify-center pl-4 rounded-l-xl border-r-0">
@@ -494,7 +494,7 @@ export function AdminStudents() {
 
       {editing && (
         <div className="fixed inset-0 bg-black/40 z-30 flex items-end justify-center">
-          <div className="bg-white w-full max-w-[430px] rounded-t-2xl p-5">
+          <div className="bg-white w-full max-w-[430px] sm:max-w-[520px] md:max-w-[640px] rounded-t-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">Editar alumno</h2>
               <button
@@ -517,7 +517,7 @@ export function AdminStudents() {
                   {editError}
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   placeholder="Nombre"
@@ -646,7 +646,7 @@ export function AdminStudents() {
 
       {createOpen && (
         <div className="fixed inset-0 bg-black/40 z-30 flex items-end justify-center">
-          <div className="bg-white w-full max-w-[430px] rounded-t-2xl p-5">
+          <div className="bg-white w-full max-w-[430px] sm:max-w-[520px] md:max-w-[640px] rounded-t-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">Nuevo alumno</h2>
               <button
@@ -667,7 +667,7 @@ export function AdminStudents() {
                   {createError}
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   placeholder="Nombre"

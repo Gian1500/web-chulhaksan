@@ -148,7 +148,7 @@ export function Payments() {
   return (
     <div className="min-h-screen bg-background-light text-[#1b0d0d]">
       <header className="sticky top-0 z-50 bg-background-light/80 backdrop-blur-md border-b border-gray-200">
-        <div className="flex items-center p-4 justify-between max-w-md mx-auto">
+        <div className="flex items-center p-4 justify-between w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto">
           <Link
             className="text-[#1b0d0d] flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
             to="/dashboard"
@@ -161,7 +161,7 @@ export function Payments() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto pb-24">
+      <main className="w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto pb-24">
         <section className="p-4">
           <div className="bg-white rounded-xl p-5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)] flex items-center gap-4">
             <div className="relative">
@@ -345,8 +345,8 @@ export function Payments() {
               Todav??a no hay pagos registrados.
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <div className="grid grid-cols-[1.2fr_1fr_0.8fr] gap-2 px-4 py-2 bg-gray-50 text-[11px] font-semibold text-gray-500 uppercase">
+            <div className="bg-white rounded-xl border border-gray-100 overflow-x-auto">
+              <div className="min-w-[420px] grid grid-cols-[1.2fr_1fr_0.8fr] gap-2 px-4 py-2 bg-gray-50 text-[11px] font-semibold text-gray-500 uppercase">
                 <span>Periodo</span>
                 <span>Fecha</span>
                 <span className="text-right">Importe</span>
@@ -355,7 +355,7 @@ export function Payments() {
                 {paymentHistory.map((item) => (
                   <div
                     key={item.paymentId ?? item.feeId}
-                    className="grid grid-cols-[1.2fr_1fr_0.8fr] gap-2 px-4 py-3 text-sm text-gray-700"
+                    className="min-w-[420px] grid grid-cols-[1.2fr_1fr_0.8fr] gap-2 px-4 py-3 text-sm text-gray-700"
                   >
                     <div className="flex flex-col">
                       <span className="font-semibold">
@@ -383,7 +383,7 @@ export function Payments() {
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-200 pb-6 pt-2">
-        <div className="max-w-md mx-auto flex justify-around items-center">
+        <div className="w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto flex justify-around items-center">
           <Link className="flex flex-col items-center gap-1 text-gray-400" to="/dashboard">
             <span className="material-symbols-outlined">home</span>
             <span className="text-[10px] font-medium">Inicio</span>

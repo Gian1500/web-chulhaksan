@@ -95,7 +95,7 @@ export function Home() {
             <span className="h-[1px] w-8 bg-primary/40" />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4 max-w-md mx-auto relative z-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto relative z-10">
           <div className="bg-white p-5 rounded-2xl border border-primary/40 shadow-soft-red transition-all duration-300 flex flex-col items-center text-center">
             <div className="w-12 h-12 rounded-full bg-primary/5 flex items-center justify-center mb-3">
               <span className="material-symbols-outlined text-primary text-2xl">

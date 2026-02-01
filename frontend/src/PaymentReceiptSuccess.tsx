@@ -118,7 +118,7 @@ export function PaymentReceiptSuccess() {
 
   return (
     <div className="bg-background-light min-h-screen flex flex-col items-center">
-      <div className="w-full max-w-[430px] min-h-screen flex flex-col shadow-2xl bg-background-light overflow-hidden">
+      <div className="w-full max-w-[430px] sm:max-w-[560px] md:max-w-[720px] min-h-screen flex flex-col shadow-2xl bg-background-light overflow-hidden">
         <div className="flex items-center bg-background-light p-4 pb-2 justify-between sticky top-0 z-10">
           <Link
             className="text-background-dark flex size-12 shrink-0 items-center cursor-pointer"

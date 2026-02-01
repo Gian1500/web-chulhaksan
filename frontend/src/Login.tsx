@@ -50,7 +50,7 @@ export function Login() {
       </div>
 
       <div className="flex-1 flex flex-col items-center px-6">
-        <div className="w-full max-w-sm mt-2 mb-8">
+        <div className="w-full max-w-sm sm:max-w-md mt-2 mb-8">
           <div
             aria-label="Logo Chul Hak San"
             className="w-full bg-center bg-no-repeat bg-contain flex flex-col justify-center overflow-hidden bg-transparent min-h-[160px]"
@@ -58,7 +58,7 @@ export function Login() {
           />
         </div>
 
-        <div className="w-full max-w-sm text-center mb-10">
+        <div className="w-full max-w-sm sm:max-w-md text-center mb-10">
           <h2 className="text-[#1a1a2e] text-2xl font-bold tracking-tight mb-3">
             Acceso al Portal
           </h2>
@@ -68,7 +68,7 @@ export function Login() {
           </p>
         </div>
 
-        <form className="w-full max-w-sm flex flex-col gap-5" onSubmit={handleSubmit}>
+        <form className="w-full max-w-sm sm:max-w-md flex flex-col gap-5" onSubmit={handleSubmit}>
           <div className="flex flex-col">
             <label className="flex flex-col w-full">
               <span className="text-[#1a1a2e] text-[12px] font-bold uppercase tracking-[0.05em] mb-2 ml-1 opacity-80">

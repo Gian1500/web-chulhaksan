@@ -4,7 +4,7 @@ export function Attendance() {
   return (
     <div className="bg-background-light min-h-screen flex flex-col checkbox-custom">
       <header className="sticky top-0 z-20 bg-background-light/80 backdrop-blur-md border-b border-[#e7cfcf]">
-        <div className="flex items-center p-4 justify-between max-w-md mx-auto">
+        <div className="flex items-center p-4 justify-between w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto">
           <Link
             className="text-[#1b0d0d] flex size-10 shrink-0 items-center justify-center"
             to="/profesor/alumnos"
@@ -22,7 +22,7 @@ export function Attendance() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-md mx-auto w-full pb-32">
+      <main className="flex-1 w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto pb-32">
         <section className="p-4">
           <div className="flex flex-col gap-0.5 bg-white p-4 rounded-xl shadow-sm border border-[#e7cfcf]">
             <div className="flex items-center p-1 justify-between mb-2">
@@ -275,7 +275,7 @@ export function Attendance() {
         </section>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background-light/95 backdrop-blur-md z-30 max-w-md mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background-light/95 backdrop-blur-md z-30 w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto">
         <div className="mb-3 text-center">
           <p className="text-[#1b0d0d] text-sm font-medium">
             18 estudiantes presentes

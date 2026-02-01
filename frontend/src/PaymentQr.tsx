@@ -91,7 +91,7 @@ export function PaymentQr() {
 
   return (
     <div className="bg-background-light min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-[420px] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="w-full max-w-[420px] sm:max-w-[560px] md:max-w-[720px] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
         <div className="flex items-center bg-white p-4 pb-2 justify-between border-b border-gray-100">
           <Link
             className="text-[#1b0d0d] flex size-12 shrink-0 items-center justify-start"
@@ -120,7 +120,7 @@ export function PaymentQr() {
             cuota.
           </p>
 
-          <div className="w-full max-w-[280px] aspect-square bg-white p-4 rounded-xl shadow-inner border-2 border-primary/20 flex items-center justify-center">
+          <div className="w-full max-w-[280px] sm:max-w-[320px] aspect-square bg-white p-4 rounded-xl shadow-inner border-2 border-primary/20 flex items-center justify-center">
             {loading && (
               <div className="text-sm text-gray-500">Generando QR...</div>
             )}

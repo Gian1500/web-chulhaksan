@@ -50,7 +50,7 @@ export function ChangePassword() {
 
   return (
     <div className="min-h-screen bg-background-light text-[#1b0d0d] flex flex-col items-center px-6">
-      <div className="w-full max-w-sm mt-16">
+      <div className="w-full max-w-sm sm:max-w-md mt-16">
         <h2 className="text-2xl font-bold tracking-tight text-center">
           Actualizá tu contraseña
         </h2>
@@ -60,7 +60,7 @@ export function ChangePassword() {
       </div>
 
       <form
-        className="w-full max-w-sm mt-8 space-y-4"
+        className="w-full max-w-sm sm:max-w-md mt-8 space-y-4"
         onSubmit={handleSubmit}
       >
         <div className="flex flex-col">

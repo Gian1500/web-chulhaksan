@@ -242,7 +242,7 @@ export function Dashboard() {
   return (
     <div className="min-h-screen bg-background-light text-[#1b0d0d]">
       <header className="sticky top-0 z-20 bg-background-light/80 backdrop-blur-md border-b border-gray-200">
-        <div className="flex items-center p-4 justify-between max-w-md mx-auto">
+        <div className="flex items-center p-4 justify-between w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto">
           <Link
             className="text-[#1b0d0d] flex size-10 shrink-0 items-center justify-center"
             to="/login"
@@ -265,7 +265,7 @@ export function Dashboard() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto p-4 pb-20 space-y-6">
+      <main className="w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto p-4 pb-20 space-y-6">
         <section className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="text-xs uppercase tracking-[0.2em] text-primary font-bold">
@@ -333,7 +333,7 @@ export function Dashboard() {
 
             <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
               <p className="text-sm font-bold">Acceso rápido</p>
-              <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Link
                   className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
                   to="/pagos"
@@ -359,7 +359,7 @@ export function Dashboard() {
           <section className="space-y-4">
             <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
               <p className="text-sm font-bold">Acceso rápido</p>
-              <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Link
                   className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
                   to="/profesor/alumnos"
@@ -403,7 +403,7 @@ export function Dashboard() {
           <section className="space-y-4">
             <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
               <p className="text-sm font-bold">Acceso rápido</p>
-              <div className="mt-4 grid grid-cols-2 gap-3 items-stretch">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
                 <Link
                   className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light h-full"
                   to="/admin/alumnos"
