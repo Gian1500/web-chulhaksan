@@ -17,9 +17,9 @@ export function Login() {
     setLoading(true);
 
     try {
-      const token = await login(dni.trim(), password);
-      const profile = await fetchMe(token);
-      if (profile?.mustChangePassword) {
+      const result = await login(dni.trim(), password);
+      const profile = await fetchMe();
+      if (result?.mustChangePassword || profile?.mustChangePassword) {
         navigate('/cambiar-contrasena');
       } else {
         navigate('/dashboard');

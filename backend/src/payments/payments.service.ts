@@ -7,6 +7,7 @@ import {
 import { FeeStatus, PaymentStatus, Prisma, UserRole } from '@prisma/client';
 import { MercadoPagoConfig, Payment, Preference } from 'mercadopago';
 import QRCode from 'qrcode';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 
@@ -50,6 +51,30 @@ export class PaymentsService {
     return { ...assignment.teacher, mpAccessToken: accessToken };
   }
 
+  private async assertTeacherAssignment(userId: string, studentDni: string) {
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (!teacher) {
+      throw new NotFoundException('Profesor no encontrado.');
+    }
+
+    const assignment = await this.prisma.studentTeacherAssignment.findFirst({
+      where: {
+        studentDni,
+        teacherId: teacher.id,
+        active: true,
+      },
+    });
+
+    if (!assignment) {
+      throw new ForbiddenException('No tienes permisos para este alumno.');
+    }
+
+    return teacher.id;
+  }
+
   async createPayment(user: any, dto: CreatePaymentDto) {
     const fee = await this.prisma.monthlyFee.findUnique({
       where: { id: dto.feeId },
@@ -67,15 +92,24 @@ export class PaymentsService {
     if (user.role === UserRole.STUDENT && user.dni !== fee.studentDni) {
       throw new BadRequestException('No tienes permisos para esta cuota.');
     }
+    if (user.role === UserRole.TEACHER) {
+      await this.assertTeacherAssignment(user.sub, fee.studentDni);
+    }
 
     const teacher = await this.getTeacherForFee(fee.studentDni);
 
-    const payment = await this.prisma.payment.create({
-      data: {
-        feeId: dto.feeId,
-        status: PaymentStatus.PENDING,
-      },
+    const existingPayment = await this.prisma.payment.findFirst({
+      where: { feeId: dto.feeId, status: PaymentStatus.PENDING },
+      orderBy: { createdAt: 'desc' },
     });
+    const payment =
+      existingPayment ??
+      (await this.prisma.payment.create({
+        data: {
+          feeId: dto.feeId,
+          status: PaymentStatus.PENDING,
+        },
+      }));
 
     const mpClient = this.getMpClient(teacher.mpAccessToken);
     const preference = new Preference(mpClient);
@@ -202,6 +236,9 @@ export class PaymentsService {
     ) {
       throw new ForbiddenException('No tienes permisos para este pago.');
     }
+    if (user.role === UserRole.TEACHER) {
+      await this.assertTeacherAssignment(user.sub, payment.fee.studentDni);
+    }
 
     const paymentMethod = this.extractPaymentMethod(payment.rawResponse);
     const displayAmount = this.applyLateFee(
@@ -239,7 +276,21 @@ export class PaymentsService {
     return this.handleWebhookWithTeacher(payload);
   }
 
-  async handleWebhookWithTeacher(payload: any, teacherId?: string) {
+  async handleWebhookWithTeacher(
+    payload: any,
+    teacherId?: string,
+    context?: { headers?: Record<string, any>; query?: Record<string, any> },
+  ) {
+    if (context?.headers) {
+      const isValid = this.validateWebhookSignature(
+        context.headers,
+        context.query ?? {},
+        payload,
+      );
+      if (!isValid) {
+        throw new BadRequestException('Firma de webhook inválida.');
+      }
+    }
     const direct = payload?.mpPaymentId && payload?.feeId && payload?.status;
     if (direct) {
       return this.upsertPaymentFromWebhook({
@@ -252,7 +303,7 @@ export class PaymentsService {
 
     const mpPaymentId = payload?.data?.id ?? payload?.id;
     if (!mpPaymentId) {
-      throw new BadRequestException('Webhook invalido.');
+      throw new BadRequestException('Webhook inválido.');
     }
     const resolvedTeacherId = teacherId ?? payload?.teacherId ?? null;
     if (!resolvedTeacherId) {
@@ -301,6 +352,16 @@ export class PaymentsService {
         where: { id: input.referenceId },
       });
       if (existingById) {
+        const shouldUpdate =
+          existingById.status !== input.status ||
+          (input.status === PaymentStatus.APPROVED && !existingById.paidAt) ||
+          (!!input.mpPaymentId &&
+            existingById.mpPaymentId !== input.mpPaymentId);
+
+        if (!shouldUpdate) {
+          return existingById;
+        }
+
         const updated = await this.prisma.payment.update({
           where: { id: existingById.id },
           data: {
@@ -311,7 +372,10 @@ export class PaymentsService {
           },
         });
 
-        if (input.status === PaymentStatus.APPROVED) {
+        if (
+          input.status === PaymentStatus.APPROVED &&
+          existingById.status !== PaymentStatus.APPROVED
+        ) {
           await this.prisma.monthlyFee.update({
             where: { id: existingById.feeId },
             data: { status: FeeStatus.PAID, paidAt: new Date() },
@@ -326,6 +390,14 @@ export class PaymentsService {
       where: { mpPaymentId: input.mpPaymentId },
     });
     if (existingByMp) {
+      const shouldUpdate =
+        existingByMp.status !== input.status ||
+        (input.status === PaymentStatus.APPROVED && !existingByMp.paidAt);
+
+      if (!shouldUpdate) {
+        return existingByMp;
+      }
+
       const updated = await this.prisma.payment.update({
         where: { id: existingByMp.id },
         data: {
@@ -335,7 +407,10 @@ export class PaymentsService {
         },
       });
 
-      if (input.status === PaymentStatus.APPROVED) {
+      if (
+        input.status === PaymentStatus.APPROVED &&
+        existingByMp.status !== PaymentStatus.APPROVED
+      ) {
         await this.prisma.monthlyFee.update({
           where: { id: existingByMp.feeId },
           data: { status: FeeStatus.PAID, paidAt: new Date() },
@@ -352,7 +427,7 @@ export class PaymentsService {
 
     const fee = await this.prisma.monthlyFee.findUnique({
       where: { id: feeId },
-      select: { id: true },
+      select: { id: true, status: true },
     });
     if (!fee) {
       throw new BadRequestException('FeeId inválido.');
@@ -368,7 +443,7 @@ export class PaymentsService {
       },
     });
 
-    if (input.status === PaymentStatus.APPROVED) {
+    if (input.status === PaymentStatus.APPROVED && fee.status !== FeeStatus.PAID) {
       await this.prisma.monthlyFee.update({
         where: { id: feeId },
         data: { status: FeeStatus.PAID, paidAt: new Date() },
@@ -376,6 +451,75 @@ export class PaymentsService {
     }
 
     return created;
+  }
+
+  private validateWebhookSignature(
+    headers: Record<string, any>,
+    query: Record<string, any>,
+    payload: any,
+  ) {
+    const secret = process.env.MP_WEBHOOK_SECRET?.trim();
+    if (!secret) {
+      return true;
+    }
+
+    const signatureHeader = String(
+      headers['x-signature'] ??
+        headers['X-Signature'] ??
+        headers['x-signature'.toLowerCase()] ??
+        '',
+    );
+    const requestId = String(
+      headers['x-request-id'] ??
+        headers['X-Request-Id'] ??
+        headers['x-request-id'.toLowerCase()] ??
+        '',
+    );
+
+    if (!signatureHeader || !requestId) {
+      return false;
+    }
+
+    const parts = signatureHeader.split(',').map((part) => part.trim());
+    const tsPart = parts.find((part) => part.startsWith('ts='));
+    const v1Part = parts.find((part) => part.startsWith('v1='));
+    if (!tsPart || !v1Part) {
+      return false;
+    }
+
+    const ts = tsPart.replace('ts=', '');
+    const signature = v1Part.replace('v1=', '');
+
+    const rawDataId =
+      (query['data.id'] as string | undefined) ??
+      payload?.data?.id ??
+      payload?.id ??
+      '';
+    if (!rawDataId) {
+      return false;
+    }
+
+    const dataId = String(rawDataId).toLowerCase();
+    const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
+    const hash = createHmac('sha256', secret).update(manifest).digest('hex');
+
+    const hashBuf = Buffer.from(hash, 'hex');
+    const sigBuf = Buffer.from(signature, 'hex');
+    if (hashBuf.length !== sigBuf.length) {
+      return false;
+    }
+
+    const toleranceSec = Number(process.env.MP_WEBHOOK_TOLERANCE_SEC ?? 300);
+    const tsValue = Number(ts);
+    if (Number.isFinite(tsValue) && toleranceSec > 0) {
+      const tsMs = ts.length > 10 ? tsValue : tsValue * 1000;
+      const drift = Math.abs(Date.now() - tsMs) / 1000;
+      if (drift > toleranceSec) {
+        return false;
+      }
+    }
+
+    return timingSafeEqual(hashBuf, sigBuf);
   }
 
   private mapMpStatus(status?: string): PaymentStatus {

@@ -4,6 +4,7 @@
 - Repo layout: `backend/` (NestJS + Prisma + PostgreSQL), `frontend/` (React + Vite + TypeScript + Tailwind).
 - App domain: escuela/academia con roles `ADMIN`, `TEACHER`, `STUDENT`.
 - Core flows: auth con JWT, asignacion de alumnos a profesor, cuotas mensuales, pagos Mercado Pago y pagos en efectivo.
+- Deploy: Front en Vercel (`frontend/vercel.json` con rewrite SPA), back en Render.
 
 ## Quick commands
 - Frontend dev: `cd frontend; npm install; npm run dev`
@@ -13,9 +14,13 @@
 
 ## Runtime/config notes
 - Backend carga `.env` desde `backend/.env` y/o raiz.
+- Auth usa cookies httpOnly (`access_token`, `refresh_token`) y frontend envía `credentials: 'include'`.
 - MP OAuth: `MP_CLIENT_ID`, `MP_CLIENT_SECRET`, `MP_OAUTH_REDIRECT_URI`, `MP_OAUTH_STATE_SECRET`.
-- MP Webhook: `MP_WEBHOOK_URL` (se usa con `teacherId` en query).
+- MP Webhook: `MP_WEBHOOK_URL` (se usa con `teacherId` en query), `MP_WEBHOOK_SECRET`, `MP_WEBHOOK_TOLERANCE_SEC`.
 - MP Back URLs: `MP_BACK_URL_SUCCESS`, `MP_BACK_URL_FAILURE`, `MP_BACK_URL_PENDING`.
+- MP Preferencias: `MP_ITEM_CATEGORY_ID`, `MP_ITEM_DESCRIPTION`, `MP_STATEMENT_DESCRIPTOR`.
+- Registro público: `ALLOW_PUBLIC_REGISTER=true` habilita `/auth/register` en producción (por defecto se bloquea).
+- JWT: `JWT_ACCESS_EXPIRES_IN` (default 15m), `JWT_REFRESH_SECRET`, `JWT_REFRESH_EXPIRES_IN` (default 7d).
 - DB: `DATABASE_URL` (PostgreSQL).
 
 ## Key business rules
@@ -27,6 +32,8 @@
 - Profesores solo pueden ver/alinear alumnos no asignados; no pueden reasignar alumnos de otros profesores.
 - Profesores pueden marcar cuota como pagada en efectivo (genera `Payment` aprobado).
 - Asistencia/solicitudes estan ocultas en frontend (endpoints quedan para futuro).
+- Cambio de contraseña obligatorio: `User.mustChangePassword` + pantalla `/cambiar-contrasena`.
+- Email y dirección son opcionales en altas/ediciones (admin/profesor).
 
 ## Data model hints (Prisma)
 - `User` con `role` y `status`.
@@ -34,6 +41,7 @@
 - `Teacher` incluye tokens OAuth de Mercado Pago.
 - `StudentTeacherAssignment` define asignacion activa.
 - `MonthlyFee` y `Payment` manejan cuotas/pagos.
+- `Payment.rawResponse` guarda MP raw; pagos en efectivo usan `{ manual: true, method: 'cash' }`.
 
 ## Frontend touchpoints
 - Auth helpers: `frontend/src/auth.ts`
@@ -41,10 +49,12 @@
 - Alumnos profesor: `frontend/src/TeacherStudents.tsx`
 - Detalle alumno + cuotas: `frontend/src/StudentDetail.tsx`
 - Pagos alumno: `frontend/src/Payments.tsx`, `frontend/src/PaymentQr.tsx`
+- Comprobante: `frontend/src/PaymentReceiptSuccess.tsx` (descarga vía `window.print()`).
 - Home: `frontend/src/Home.tsx`
 
 ## Backend touchpoints
 - Auth: `backend/src/auth/*`
+- Auth endpoints: `/auth/login` (set cookies), `/auth/refresh`, `/auth/logout`.
 - Profesores: `backend/src/teachers/*`
 - Alumnos: `backend/src/students/*`
 - Asignaciones: `backend/src/assignments/*`
@@ -58,3 +68,4 @@
 - Evitar cambios en endpoints de asistencia/solicitudes hasta nuevo requerimiento.
 - Si agregas campos a Prisma, actualizar DTOs, servicios y UI.
 - Respetar estilo UI actual (Tailwind, componentes mobile-first).
+- En pagos MP, `external_reference` es `payment.id` y `metadata.paymentId` se usa en webhook.

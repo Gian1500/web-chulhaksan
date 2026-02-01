@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { apiBaseUrl, getApiHeaders, getToken } from './auth';
+import { apiFetch } from './auth';
 
 type StudentItem = {
   dni: string;
@@ -57,23 +57,12 @@ export function TeacherStudents() {
   const availableCount = available.length;
 
   const loadStudents = async () => {
-    const token = getToken();
-    if (!token) {
-      setError('Iniciá sesión para ver tus alumnos.');
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError('');
     try {
       const [assignedResponse, availableResponse] = await Promise.all([
-        fetch(`${apiBaseUrl}/teachers/me/students`, {
-          headers: getApiHeaders({ token }),
-        }),
-        fetch(`${apiBaseUrl}/teachers/me/available-students`, {
-          headers: getApiHeaders({ token }),
-        }),
+        apiFetch('/teachers/me/students', { method: 'GET' }),
+        apiFetch('/teachers/me/available-students', { method: 'GET' }),
       ]);
 
       if (!assignedResponse.ok) {
@@ -98,9 +87,9 @@ export function TeacherStudents() {
 
       const statusResults = await Promise.all(
         baseAssigned.map(async (student) => {
-          const feeResponse = await fetch(
-            `${apiBaseUrl}/fees/student/${student.dni}`,
-            { headers: getApiHeaders({ token }) },
+          const feeResponse = await apiFetch(
+            `/fees/student/${student.dni}`,
+            { method: 'GET' },
           );
           if (!feeResponse.ok) {
             return { dni: student.dni, status: 'UNKNOWN' as const };
@@ -155,14 +144,11 @@ export function TeacherStudents() {
   }, [available, query]);
 
   const handleAssign = async (dni: string) => {
-    const token = getToken();
-    if (!token) return;
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/teachers/me/students/${dni}/assign`,
+      const response = await apiFetch(
+        `/teachers/me/students/${dni}/assign`,
         {
           method: 'POST',
-          headers: getApiHeaders({ token }),
         },
       );
       if (!response.ok) {
@@ -179,15 +165,13 @@ export function TeacherStudents() {
 
   const handleCreateStudent = async (event: React.FormEvent) => {
     event.preventDefault();
-    const token = getToken();
-    if (!token) return;
     setSaving(true);
     setError('');
     setCreateError('');
     try {
-      const response = await fetch(`${apiBaseUrl}/teachers/me/students`, {
+      const response = await apiFetch('/teachers/me/students', {
         method: 'POST',
-        headers: getApiHeaders({ token, json: true }),
+        json: true,
         body: JSON.stringify({
           ...form,
           dni: sanitizeDni(form.dni),

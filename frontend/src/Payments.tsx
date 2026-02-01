@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { apiBaseUrl, getApiHeaders, getToken } from './auth';
+import { apiFetch } from './auth';
 
 type FeeItem = {
   id: string;
@@ -73,22 +73,11 @@ export function Payments() {
   }, [fees]);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      setError('Iniciá sesión para ver tus cuotas.');
-      setLoading(false);
-      return;
-    }
-
     const loadFees = async () => {
       try {
         const [feesResponse, profileResponse] = await Promise.all([
-          fetch(`${apiBaseUrl}/fees/me`, {
-            headers: getApiHeaders({ token }),
-          }),
-          fetch(`${apiBaseUrl}/students/me`, {
-            headers: getApiHeaders({ token }),
-          }),
+          apiFetch('/fees/me', { method: 'GET' }),
+          apiFetch('/students/me', { method: 'GET' }),
         ]);
         if (profileResponse.ok) {
           const profileData = (await profileResponse.json()) as StudentProfile;
@@ -116,16 +105,11 @@ export function Payments() {
   }, []);
 
   const handlePay = async (feeId: string) => {
-    const token = getToken();
-    if (!token) {
-      setError('Iniciá sesión para continuar.');
-      return;
-    }
     setError('');
     try {
-      const response = await fetch(`${apiBaseUrl}/payments/create`, {
+      const response = await apiFetch('/payments/create', {
         method: 'POST',
-        headers: getApiHeaders({ token, json: true }),
+        json: true,
         body: JSON.stringify({ feeId }),
       });
       if (!response.ok) {

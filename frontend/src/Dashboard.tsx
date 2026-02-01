@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import type { AuthProfile, UserRole } from './auth';
-import { apiBaseUrl, clearAuth, getApiHeaders, getProfile, getToken } from './auth';
+import { apiFetch, fetchMe, getProfile, logout } from './auth';
 
 const roleLabels: Record<UserRole, string> = {
   STUDENT: 'Alumno',
@@ -37,43 +37,35 @@ export function Dashboard() {
     return 'Panel del Alumno';
   }, [role]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     const confirmed = window.confirm('¿Querés cerrar sesión?');
     if (!confirmed) return;
-    clearAuth();
+    await logout();
     setProfile(null);
     navigate('/login');
   };
 
   useEffect(() => {
     if (!profile) {
-      setDisplayName('');
-      setTeacherSummary(null);
+      fetchMe()
+        .then((data) => setProfile(data))
+        .catch(() => {
+          setDisplayName('');
+          setTeacherSummary(null);
+          setMpConnected(false);
+        });
       return;
     }
-
-    const token = getToken();
-    if (!token) {
-      setDisplayName('');
-      setTeacherSummary(null);
-      return;
-    }
-
     const loadName = async () => {
       try {
         if (profile.role === 'STUDENT') {
-          const response = await fetch(`${apiBaseUrl}/students/me`, {
-            headers: getApiHeaders({ token }),
-          });
+          const response = await apiFetch('/students/me', { method: 'GET' });
           if (response.ok) {
             const data = await response.json();
             setDisplayName(`${data.firstName ?? ''} ${data.lastName ?? ''}`.trim());
-            const teacherResponse = await fetch(
-              `${apiBaseUrl}/students/me/teacher`,
-              {
-                headers: getApiHeaders({ token }),
-              },
-            );
+            const teacherResponse = await apiFetch('/students/me/teacher', {
+              method: 'GET',
+            });
             if (teacherResponse.ok) {
               const teacherData =
                 (await teacherResponse.json()) as TeacherSummary | null;
@@ -86,9 +78,7 @@ export function Dashboard() {
         }
 
         if (profile.role === 'TEACHER') {
-          const response = await fetch(`${apiBaseUrl}/teachers/me`, {
-            headers: getApiHeaders({ token }),
-          });
+          const response = await apiFetch('/teachers/me', { method: 'GET' });
           if (response.ok) {
             const data = await response.json();
             setDisplayName(`${data.firstName ?? ''} ${data.lastName ?? ''}`.trim());
@@ -117,18 +107,13 @@ export function Dashboard() {
   }, [searchParams]);
 
   const handleGenerateFees = async () => {
-    const token = getToken();
-    if (!token) {
-      setFeeMessage('Iniciá sesión como admin para generar cuotas.');
-      return;
-    }
     setFeeMessage('');
     setFeeLoading(true);
     try {
       const now = new Date();
-      const response = await fetch(`${apiBaseUrl}/fees/generate`, {
+      const response = await apiFetch('/fees/generate', {
         method: 'POST',
-        headers: getApiHeaders({ token, json: true }),
+        json: true,
         body: JSON.stringify({
           month: now.getMonth() + 1,
           year: now.getFullYear(),
@@ -153,17 +138,12 @@ export function Dashboard() {
   };
 
   const handleSaveGlobalFee = async () => {
-    const token = getToken();
-    if (!token) {
-      setFeeMessage('Iniciá sesión como admin para configurar la cuota.');
-      return;
-    }
     setFeeMessage('');
     setFeeLoading(true);
     try {
-      const response = await fetch(`${apiBaseUrl}/fees/settings`, {
+      const response = await apiFetch('/fees/settings', {
         method: 'PATCH',
-        headers: getApiHeaders({ token, json: true }),
+        json: true,
         body: JSON.stringify({
           monthlyAmount: feeAmount,
           currency: feeCurrency,
@@ -187,15 +167,10 @@ export function Dashboard() {
   };
 
   const handleConnectMp = async () => {
-    const token = getToken();
-    if (!token) {
-      setMpMessage('Iniciá sesión como profesor para conectar Mercado Pago.');
-      return;
-    }
     setMpMessage('');
     try {
-      const response = await fetch(`${apiBaseUrl}/teachers/me/mercadopago/connect`, {
-        headers: getApiHeaders({ token }),
+      const response = await apiFetch('/teachers/me/mercadopago/connect', {
+        method: 'GET',
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
@@ -214,20 +189,11 @@ export function Dashboard() {
   };
 
   const handleDisconnectMp = async () => {
-    const token = getToken();
-    if (!token) {
-      setMpMessage('Iniciá sesión como profesor para desconectar.');
-      return;
-    }
     setMpMessage('');
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/teachers/me/mercadopago/disconnect`,
-        {
-          method: 'POST',
-          headers: getApiHeaders({ token }),
-        },
-      );
+      const response = await apiFetch('/teachers/me/mercadopago/disconnect', {
+        method: 'POST',
+      });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.message ?? 'No se pudo desconectar.');

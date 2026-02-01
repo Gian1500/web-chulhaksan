@@ -1,11 +1,15 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UserRole, UserStatus } from '@prisma/client';
 import { compare, hash } from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service';
 import { normalizeDni } from '../normalize';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
@@ -14,7 +18,61 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
+  private getAccessExpiresIn() {
+    return process.env.JWT_ACCESS_EXPIRES_IN ?? '15m';
+  }
+
+  private getRefreshSecret() {
+    return process.env.JWT_REFRESH_SECRET ?? process.env.JWT_SECRET ?? '';
+  }
+
+  private getRefreshExpiresIn() {
+    return process.env.JWT_REFRESH_EXPIRES_IN ?? '7d';
+  }
+
+  private parseDurationToSeconds(value: string, fallbackSeconds: number) {
+    const raw = value.trim();
+    if (!raw) return fallbackSeconds;
+    if (/^\d+$/.test(raw)) return Number(raw);
+    const match = raw.match(/^(\d+)([smhd])$/i);
+    if (!match) return fallbackSeconds;
+    const amount = Number(match[1]);
+    const unit = match[2].toLowerCase();
+    const multipliers: Record<string, number> = {
+      s: 1,
+      m: 60,
+      h: 3600,
+      d: 86400,
+    };
+    return amount * (multipliers[unit] ?? fallbackSeconds);
+  }
+
+  private async issueTokens(payload: {
+    sub: string;
+    dni: string;
+    role: UserRole;
+  }) {
+    const accessToken = await this.jwtService.signAsync(payload, {
+      expiresIn: this.getAccessExpiresIn(),
+    });
+    const refreshExpiresIn = this.getRefreshExpiresIn();
+    const refreshToken = await this.jwtService.signAsync(payload, {
+      secret: this.getRefreshSecret(),
+      expiresIn: refreshExpiresIn,
+    });
+    const refreshExpiresAt = new Date(
+      Date.now() +
+        this.parseDurationToSeconds(refreshExpiresIn, 7 * 86400) * 1000,
+    );
+    return { accessToken, refreshToken, refreshExpiresAt };
+  }
+
   async register(dto: RegisterDto) {
+    const allowPublicRegister =
+      (process.env.ALLOW_PUBLIC_REGISTER ?? '').toLowerCase() === 'true';
+    if (process.env.NODE_ENV === 'production' && !allowPublicRegister) {
+      throw new BadRequestException('Registro público deshabilitado.');
+    }
     if (dto.role === UserRole.ADMIN) {
       throw new BadRequestException('No puedes registrarte como admin.');
     }
@@ -38,7 +96,7 @@ export class AuthService {
       select: { id: true },
     });
     if (existing) {
-      throw new BadRequestException('El DNI ya esta registrado.');
+      throw new BadRequestException('El DNI ya está registrado.');
     }
 
     const passwordHash = await hash(dto.password, 10);
@@ -100,7 +158,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new BadRequestException('Credenciales invalidas.');
+      throw new BadRequestException('Credenciales inválidas.');
     }
 
     if (user.status !== UserStatus.ACTIVE) {
@@ -109,13 +167,113 @@ export class AuthService {
 
     const isValid = await compare(dto.password, user.passwordHash);
     if (!isValid) {
-      throw new BadRequestException('Credenciales invalidas.');
+      throw new BadRequestException('Credenciales inválidas.');
     }
 
     const payload = { sub: user.id, dni: user.dni, role: user.role };
-    const accessToken = await this.jwtService.signAsync(payload);
+    const { accessToken, refreshToken, refreshExpiresAt } =
+      await this.issueTokens(payload);
+    const refreshTokenHash = await hash(refreshToken, 10);
 
-    return { accessToken, mustChangePassword: user.mustChangePassword };
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        refreshTokenHash,
+        refreshTokenExpiresAt: refreshExpiresAt,
+      },
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      mustChangePassword: user.mustChangePassword,
+    };
+  }
+
+  async refreshSession(refreshToken: string) {
+    if (!refreshToken) {
+      throw new BadRequestException('Sesión expirada.');
+    }
+
+    let payload: { sub: string; dni: string; role: UserRole };
+    try {
+      payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: this.getRefreshSecret(),
+      });
+    } catch {
+      throw new BadRequestException('Sesión inválida.');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: {
+        id: true,
+        dni: true,
+        role: true,
+        status: true,
+        mustChangePassword: true,
+        refreshTokenHash: true,
+        refreshTokenExpiresAt: true,
+      },
+    });
+    if (!user || !user.refreshTokenHash) {
+      throw new BadRequestException('Sesión inválida.');
+    }
+    if (user.status !== UserStatus.ACTIVE) {
+      throw new BadRequestException('Usuario bloqueado o pendiente.');
+    }
+    if (
+      user.refreshTokenExpiresAt &&
+      user.refreshTokenExpiresAt.getTime() < Date.now()
+    ) {
+      throw new BadRequestException('Sesión expirada.');
+    }
+    const isValid = await compare(refreshToken, user.refreshTokenHash);
+    if (!isValid) {
+      throw new BadRequestException('Sesión inválida.');
+    }
+
+    const { accessToken, refreshToken: nextRefreshToken, refreshExpiresAt } =
+      await this.issueTokens({
+        sub: user.id,
+        dni: user.dni,
+        role: user.role,
+      });
+    const refreshTokenHash = await hash(nextRefreshToken, 10);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        refreshTokenHash,
+        refreshTokenExpiresAt: refreshExpiresAt,
+      },
+    });
+
+    return {
+      accessToken,
+      refreshToken: nextRefreshToken,
+      mustChangePassword: user.mustChangePassword,
+    };
+  }
+
+  async logout(userId?: string) {
+    if (!userId) return;
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { refreshTokenHash: null, refreshTokenExpiresAt: null },
+    });
+  }
+
+  async logoutByRefreshToken(refreshToken: string) {
+    if (!refreshToken) return;
+    try {
+      const payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: this.getRefreshSecret(),
+      });
+      await this.logout(payload.sub);
+    } catch {
+      return;
+    }
   }
 
   async getMe(userId: string) {

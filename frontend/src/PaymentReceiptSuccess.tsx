@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { apiBaseUrl, getApiHeaders, getToken } from './auth';
+import { apiFetch } from './auth';
 
 type PaymentDetails = {
   id: string;
@@ -52,12 +52,6 @@ export function PaymentReceiptSuccess() {
   };
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      setError('Iniciá sesión para ver el comprobante.');
-      setLoading(false);
-      return;
-    }
     if (!externalRef) {
       setError('No se encontró el pago.');
       setLoading(false);
@@ -66,8 +60,8 @@ export function PaymentReceiptSuccess() {
 
     const loadPayment = async () => {
       try {
-        const response = await fetch(`${apiBaseUrl}/payments/${externalRef}`, {
-          headers: getApiHeaders({ token }),
+        const response = await apiFetch(`/payments/${externalRef}`, {
+          method: 'GET',
         });
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));

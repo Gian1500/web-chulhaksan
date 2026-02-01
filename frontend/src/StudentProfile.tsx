@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  apiBaseUrl,
+  apiFetch,
   fetchMe,
-  getApiHeaders,
   getProfile,
-  getToken,
   type AuthProfile,
   type UserRole,
 } from './auth';
@@ -56,37 +54,27 @@ export function StudentProfile() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      setError('Iniciá sesión para ver tu perfil.');
-      setLoading(false);
-      return;
-    }
-
     const loadProfile = async () => {
       try {
         let currentProfile = authProfile;
         if (!currentProfile) {
-          currentProfile = await fetchMe(token);
+          currentProfile = await fetchMe();
           setAuthProfile(currentProfile);
         }
 
         setRole(currentProfile.role);
 
         if (currentProfile.role === 'STUDENT') {
-          const response = await fetch(`${apiBaseUrl}/students/me`, {
-            headers: getApiHeaders({ token }),
-          });
+          const response = await apiFetch('/students/me', { method: 'GET' });
           if (!response.ok) {
             const body = await response.json().catch(() => ({}));
             throw new Error(body.message ?? 'No se pudo cargar el perfil.');
           }
           const data = (await response.json()) as StudentProfileData;
           setProfile(data);
-          const teacherResponse = await fetch(
-            `${apiBaseUrl}/students/me/teacher`,
-            { headers: getApiHeaders({ token }) },
-          );
+          const teacherResponse = await apiFetch('/students/me/teacher', {
+            method: 'GET',
+          });
           if (teacherResponse.ok) {
             const teacherData =
               (await teacherResponse.json()) as TeacherSummary | null;
@@ -96,12 +84,8 @@ export function StudentProfile() {
           }
         } else if (currentProfile.role === 'TEACHER') {
           const [teacherResponse, studentsResponse] = await Promise.all([
-            fetch(`${apiBaseUrl}/teachers/me`, {
-              headers: getApiHeaders({ token }),
-            }),
-            fetch(`${apiBaseUrl}/teachers/me/students`, {
-              headers: getApiHeaders({ token }),
-            }),
+            apiFetch('/teachers/me', { method: 'GET' }),
+            apiFetch('/teachers/me/students', { method: 'GET' }),
           ]);
 
           if (!teacherResponse.ok) {

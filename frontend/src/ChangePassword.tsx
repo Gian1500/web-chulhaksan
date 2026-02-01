@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiBaseUrl, fetchMe, getApiHeaders, getToken } from './auth';
+import { apiFetch, fetchMe } from './auth';
 
 export function ChangePassword() {
   const navigate = useNavigate();
@@ -21,23 +21,18 @@ export function ChangePassword() {
       setError('Las contraseñas no coinciden.');
       return;
     }
-    const token = getToken();
-    if (!token) {
-      setError('Iniciá sesión nuevamente.');
-      return;
-    }
     setSaving(true);
     try {
-      const response = await fetch(`${apiBaseUrl}/auth/change-password`, {
+      const response = await apiFetch('/auth/change-password', {
         method: 'POST',
-        headers: getApiHeaders({ token, json: true }),
+        json: true,
         body: JSON.stringify({ newPassword: password.trim() }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.message ?? 'No se pudo cambiar la contraseña.');
       }
-      await fetchMe(token);
+      await fetchMe();
       navigate('/dashboard');
     } catch (err) {
       const message =

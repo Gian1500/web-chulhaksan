@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { apiBaseUrl, getApiHeaders, getToken } from './auth';
+import { apiFetch } from './auth';
 
 type FeeItem = {
   id: string;
@@ -39,12 +39,6 @@ export function PaymentQr() {
   }, [fee]);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      setError('Iniciá sesión para generar el código QR.');
-      setLoading(false);
-      return;
-    }
     if (!feeId) {
       setError('No se encontró la cuota.');
       setLoading(false);
@@ -54,12 +48,8 @@ export function PaymentQr() {
     const loadQr = async () => {
       try {
         const [feesResponse, qrResponse] = await Promise.all([
-          fetch(`${apiBaseUrl}/fees/me`, {
-            headers: getApiHeaders({ token }),
-          }),
-          fetch(`${apiBaseUrl}/payments/${feeId}/qr`, {
-            headers: getApiHeaders({ token }),
-          }),
+          apiFetch('/fees/me', { method: 'GET' }),
+          apiFetch(`/payments/${feeId}/qr`, { method: 'GET' }),
         ]);
 
         if (!feesResponse.ok) {
