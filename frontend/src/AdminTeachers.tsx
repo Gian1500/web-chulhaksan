@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { apiBaseUrl, getApiHeaders, getToken } from './auth';
+import { apiFetch } from './auth';
 
 type AdminTeacher = {
   id: string;
@@ -68,18 +68,11 @@ export function AdminTeachers() {
   const [copiedReset, setCopiedReset] = useState(false);
 
   const loadTeachers = async () => {
-    const token = getToken();
-    if (!token) {
-      setError('Iniciá sesión como admin.');
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError('');
     try {
-      const response = await fetch(`${apiBaseUrl}/admin/teachers`, {
-        headers: getApiHeaders({ token }),
+      const response = await apiFetch('/admin/teachers', {
+        method: 'GET',
         cache: 'no-store',
       });
       if (!response.ok) {
@@ -143,20 +136,15 @@ export function AdminTeachers() {
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!editing) return;
-    const token = getToken();
-    if (!token) return;
     setSaving(true);
     setError('');
     setEditError('');
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/admin/teachers/${editing.id}`,
-        {
-          method: 'PATCH',
-          headers: getApiHeaders({ token, json: true }),
-          body: JSON.stringify(buildPayload()),
-        },
-      );
+      const response = await apiFetch(`/admin/teachers/${editing.id}`, {
+        method: 'PATCH',
+        json: true,
+        body: JSON.stringify(buildPayload()),
+      });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.message ?? 'No se pudo guardar el profesor.');
@@ -176,8 +164,6 @@ export function AdminTeachers() {
 
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault();
-    const token = getToken();
-    if (!token) return;
     setCreating(true);
     setError('');
     setCreateError('');
@@ -186,9 +172,9 @@ export function AdminTeachers() {
         .split(',')
         .map((item) => item.trim())
         .filter(Boolean);
-      const response = await fetch(`${apiBaseUrl}/admin/users`, {
+      const response = await apiFetch('/admin/users', {
         method: 'POST',
-        headers: getApiHeaders({ token, json: true }),
+        json: true,
           body: JSON.stringify({
             role: 'TEACHER',
             dni: createForm.dni.trim(),
@@ -222,17 +208,11 @@ export function AdminTeachers() {
     if (!confirm(`Eliminar profesor ${teacher.firstName} ${teacher.lastName}?`)) {
       return;
     }
-    const token = getToken();
-    if (!token) return;
     setError('');
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/admin/teachers/${teacher.id}`,
-        {
-          method: 'DELETE',
-          headers: getApiHeaders({ token }),
-        },
-      );
+      const response = await apiFetch(`/admin/teachers/${teacher.id}`, {
+        method: 'DELETE',
+      });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.message ?? 'No se pudo eliminar el profesor.');
@@ -251,16 +231,13 @@ export function AdminTeachers() {
       return;
     }
     if (!confirm('¿Querés resetear la contraseña de este profesor?')) return;
-    const token = getToken();
-    if (!token) return;
     setResetting(true);
     setEditError('');
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/admin/users/${editing.user.id}/reset-password`,
+      const response = await apiFetch(
+        `/admin/users/${editing.user.id}/reset-password`,
         {
           method: 'POST',
-          headers: getApiHeaders({ token }),
         },
       );
       if (!response.ok) {

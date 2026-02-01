@@ -7,21 +7,15 @@ export type AuthProfile = {
   mustChangePassword?: boolean;
 };
 
-const TOKEN_KEY = 'chulhaksan_token';
 const PROFILE_KEY = 'chulhaksan_profile';
+const LEGACY_TOKEN_KEY = 'chulhaksan_token';
 
 export const apiBaseUrl =
   import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const NGROK_HEADER = 'ngrok-skip-browser-warning';
 
-export function getApiHeaders(options?: {
-  token?: string;
-  json?: boolean;
-}) {
+export function getApiHeaders(options?: { json?: boolean }) {
   const headers: Record<string, string> = {};
-  if (options?.token) {
-    headers.Authorization = `Bearer ${options.token}`;
-  }
   if (options?.json) {
     headers['Content-Type'] = 'application/json';
   }
@@ -35,17 +29,39 @@ export function getApiHeaders(options?: {
   return headers;
 }
 
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
+export async function apiFetch(
+  input: string,
+  init: (RequestInit & { json?: boolean; retry?: boolean }) = {},
+) {
+  const { json, retry = true, ...rest } = init;
+  const url = input.startsWith('http') ? input : `${apiBaseUrl}${input}`;
 
-export function setToken(token: string) {
-  localStorage.setItem(TOKEN_KEY, token);
+  const response = await fetch(url, {
+    ...rest,
+    headers: {
+      ...getApiHeaders({ json }),
+      ...(rest.headers ?? {}),
+    },
+    credentials: 'include',
+  });
+
+  if (response.status === 401 && retry) {
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      return apiFetch(input, { ...init, retry: false });
+    }
+  }
+
+  if (response.status === 401) {
+    clearAuth();
+  }
+
+  return response;
 }
 
 export function clearAuth() {
-  localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(PROFILE_KEY);
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
 }
 
 export function getProfile(): AuthProfile | null {
@@ -63,9 +79,9 @@ export function setProfile(profile: AuthProfile) {
 }
 
 export async function login(dni: string, password: string) {
-  const response = await fetch(`${apiBaseUrl}/auth/login`, {
+  const response = await apiFetch('/auth/login', {
     method: 'POST',
-    headers: getApiHeaders({ json: true }),
+    json: true,
     body: JSON.stringify({ dni, password }),
   });
 
@@ -75,21 +91,31 @@ export async function login(dni: string, password: string) {
   }
 
   const data = (await response.json()) as {
-    accessToken: string;
     mustChangePassword?: boolean;
   };
-  if (!data?.accessToken) {
-    throw new Error('Respuesta inválida del servidor.');
-  }
-  setToken(data.accessToken);
-  return data.accessToken;
+  return data;
 }
 
-export async function fetchMe(token: string) {
-  const response = await fetch(`${apiBaseUrl}/auth/me`, {
-    method: 'GET',
-    headers: getApiHeaders({ token }),
+export async function refreshSession() {
+  const response = await fetch(`${apiBaseUrl}/auth/refresh`, {
+    method: 'POST',
+    headers: getApiHeaders({ json: true }),
+    credentials: 'include',
   });
+  return response.ok;
+}
+
+export async function logout() {
+  await fetch(`${apiBaseUrl}/auth/logout`, {
+    method: 'POST',
+    headers: getApiHeaders({ json: true }),
+    credentials: 'include',
+  });
+  clearAuth();
+}
+
+export async function fetchMe() {
+  const response = await apiFetch('/auth/me', { method: 'GET' });
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));

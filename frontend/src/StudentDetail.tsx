@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { apiBaseUrl, getApiHeaders, getProfile, getToken } from './auth';
+import { apiFetch, getProfile } from './auth';
 
 type StudentDetailData = {
   dni: string;
@@ -58,8 +58,7 @@ export function StudentDetail() {
   const [copiedReset, setCopiedReset] = useState(false);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token || !dni) {
+    if (!dni) {
       setError('Iniciá sesión para ver el alumno.');
       setLoading(false);
       return;
@@ -68,12 +67,8 @@ export function StudentDetail() {
     const load = async () => {
       try {
         const [studentResponse, feesResponse] = await Promise.all([
-          fetch(`${apiBaseUrl}/students/${dni}`, {
-            headers: getApiHeaders({ token }),
-          }),
-          fetch(`${apiBaseUrl}/fees/student/${dni}`, {
-            headers: getApiHeaders({ token }),
-          }),
+          apiFetch(`/students/${dni}`, { method: 'GET' }),
+          apiFetch(`/fees/student/${dni}`, { method: 'GET' }),
         ]);
 
         if (!studentResponse.ok) {
@@ -112,14 +107,11 @@ export function StudentDetail() {
   }, [student]);
 
   const handleMarkPaid = async (feeId: string) => {
-    const token = getToken();
-    if (!token) return;
     setMarking(feeId);
     setError('');
     try {
-      const response = await fetch(`${apiBaseUrl}/fees/${feeId}/mark-paid`, {
+      const response = await apiFetch(`/fees/${feeId}/mark-paid`, {
         method: 'PATCH',
-        headers: getApiHeaders({ token }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
@@ -141,17 +133,15 @@ export function StudentDetail() {
   };
 
   const handleUnassign = async () => {
-    const token = getToken();
-    if (!token || !dni) return;
+    if (!dni) return;
     if (!confirm('¿Querés desasignar este alumno?')) return;
     setActionLoading('unassign');
     setError('');
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/teachers/me/students/${dni}/unassign`,
+      const response = await apiFetch(
+        `/teachers/me/students/${dni}/unassign`,
         {
           method: 'POST',
-          headers: getApiHeaders({ token }),
         },
       );
       if (!response.ok) {
@@ -169,17 +159,15 @@ export function StudentDetail() {
   };
 
   const handleDelete = async () => {
-    const token = getToken();
-    if (!token || !dni) return;
+    if (!dni) return;
     if (!confirm('¿Querés eliminar este alumno? Esta acción no se puede deshacer.')) {
       return;
     }
     setActionLoading('delete');
     setError('');
     try {
-      const response = await fetch(`${apiBaseUrl}/teachers/me/students/${dni}`, {
+      const response = await apiFetch(`/teachers/me/students/${dni}`, {
         method: 'DELETE',
-        headers: getApiHeaders({ token }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
@@ -196,17 +184,15 @@ export function StudentDetail() {
   };
 
   const handleResetPassword = async () => {
-    const token = getToken();
-    if (!token || !dni) return;
+    if (!dni) return;
     if (!confirm('¿Querés resetear la contraseña de este alumno?')) return;
     setResetting(true);
     setError('');
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/teachers/me/students/${dni}/reset-password`,
+      const response = await apiFetch(
+        `/teachers/me/students/${dni}/reset-password`,
         {
           method: 'POST',
-          headers: getApiHeaders({ token }),
         },
       );
       if (!response.ok) {

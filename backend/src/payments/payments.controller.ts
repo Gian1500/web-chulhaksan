@@ -32,7 +32,14 @@ export class PaymentsController {
   }
 
   @Post('webhook')
-  webhook(@Body() body: any, @Query('teacherId') teacherId?: string) {
-    return this.paymentsService.handleWebhookWithTeacher(body, teacherId);
+  webhook(
+    @Req() req: Request,
+    @Body() body: any,
+    @Query('teacherId') teacherId?: string,
+  ) {
+    return this.paymentsService.handleWebhookWithTeacher(body, teacherId, {
+      headers: req.headers ?? {},
+      query: req.query ?? {},
+    });
   }
 }
