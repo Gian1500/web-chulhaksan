@@ -34,7 +34,7 @@ export class AuthService {
     const raw = value.trim();
     if (!raw) return '15m';
     if (/^\d+$/.test(raw)) return Number(raw);
-    return raw as StringValue;
+    return raw;
   }
 
   private parseDurationToSeconds(
