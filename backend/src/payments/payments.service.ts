@@ -123,6 +123,7 @@ export class PaymentsService {
         ...(canAutoReturn ? { auto_return: 'approved' } : {}),
         external_reference: payment.id,
         metadata: {
+          paymentId: payment.id,
           feeId: fee.id,
           studentDni: fee.studentDni,
           teacherId: teacher.id,
@@ -253,16 +254,19 @@ export class PaymentsService {
     const paymentClient = new Payment(this.getMpClient(teacher.mpAccessToken));
     const mpPayment = await paymentClient.get({ id: mpPaymentId });
     const status = this.mapMpStatus(mpPayment.status);
-    const feeId =
-      mpPayment.metadata?.feeId ?? mpPayment.external_reference ?? null;
+    const referenceId =
+      mpPayment.metadata?.paymentId ??
+      mpPayment.external_reference ??
+      mpPayment.metadata?.feeId ??
+      null;
 
-    if (!feeId) {
-      throw new BadRequestException('No se encontró feeId en el pago.');
+    if (!referenceId) {
+      throw new BadRequestException('No se encontró referencia en el pago.');
     }
 
     return this.upsertPaymentFromWebhook({
       mpPaymentId: String(mpPaymentId),
-      feeId: String(feeId),
+      referenceId: String(referenceId),
       status,
       raw: mpPayment,
     });
@@ -270,36 +274,94 @@ export class PaymentsService {
 
   private async upsertPaymentFromWebhook(input: {
     mpPaymentId: string;
-    feeId: string;
     status: PaymentStatus;
     raw: any;
+    feeId?: string;
+    referenceId?: string;
   }) {
-    const updatedPayment = await this.prisma.payment.upsert({
+    const paidAt =
+      input.status === PaymentStatus.APPROVED ? new Date() : undefined;
+
+    if (input.referenceId) {
+      const existingById = await this.prisma.payment.findUnique({
+        where: { id: input.referenceId },
+      });
+      if (existingById) {
+        const updated = await this.prisma.payment.update({
+          where: { id: existingById.id },
+          data: {
+            status: input.status,
+            rawResponse: input.raw ?? undefined,
+            paidAt,
+            mpPaymentId: input.mpPaymentId ?? existingById.mpPaymentId,
+          },
+        });
+
+        if (input.status === PaymentStatus.APPROVED) {
+          await this.prisma.monthlyFee.update({
+            where: { id: existingById.feeId },
+            data: { status: FeeStatus.PAID, paidAt: new Date() },
+          });
+        }
+
+        return updated;
+      }
+    }
+
+    const existingByMp = await this.prisma.payment.findUnique({
       where: { mpPaymentId: input.mpPaymentId },
-      update: {
-        status: input.status,
-        rawResponse: input.raw ?? undefined,
-        paidAt:
-          input.status === PaymentStatus.APPROVED ? new Date() : undefined,
-      },
-      create: {
-        feeId: input.feeId,
+    });
+    if (existingByMp) {
+      const updated = await this.prisma.payment.update({
+        where: { id: existingByMp.id },
+        data: {
+          status: input.status,
+          rawResponse: input.raw ?? undefined,
+          paidAt,
+        },
+      });
+
+      if (input.status === PaymentStatus.APPROVED) {
+        await this.prisma.monthlyFee.update({
+          where: { id: existingByMp.feeId },
+          data: { status: FeeStatus.PAID, paidAt: new Date() },
+        });
+      }
+
+      return updated;
+    }
+
+    const feeId = input.feeId ?? input.referenceId;
+    if (!feeId) {
+      throw new BadRequestException('No se encontró feeId válido.');
+    }
+
+    const fee = await this.prisma.monthlyFee.findUnique({
+      where: { id: feeId },
+      select: { id: true },
+    });
+    if (!fee) {
+      throw new BadRequestException('FeeId inválido.');
+    }
+
+    const created = await this.prisma.payment.create({
+      data: {
+        feeId,
         mpPaymentId: input.mpPaymentId,
         status: input.status,
         rawResponse: input.raw ?? undefined,
-        paidAt:
-          input.status === PaymentStatus.APPROVED ? new Date() : undefined,
+        paidAt,
       },
     });
 
     if (input.status === PaymentStatus.APPROVED) {
       await this.prisma.monthlyFee.update({
-        where: { id: input.feeId },
+        where: { id: feeId },
         data: { status: FeeStatus.PAID, paidAt: new Date() },
       });
     }
 
-    return updatedPayment;
+    return created;
   }
 
   private mapMpStatus(status?: string): PaymentStatus {
