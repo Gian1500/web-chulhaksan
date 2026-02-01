@@ -177,29 +177,6 @@ export function TeacherStudents() {
     }
   };
 
-  const handleUnassign = async (dni: string) => {
-    const token = getToken();
-    if (!token) return;
-    try {
-      const response = await fetch(
-        `${apiBaseUrl}/teachers/me/students/${dni}/unassign`,
-        {
-          method: 'POST',
-          headers: getApiHeaders({ token }),
-        },
-      );
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.message ?? 'No se pudo desasignar el alumno.');
-      }
-      await loadStudents();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'No se pudo desasignar el alumno.';
-      setError(message);
-    }
-  };
-
   const handleCreateStudent = async (event: React.FormEvent) => {
     event.preventDefault();
     const token = getToken();
