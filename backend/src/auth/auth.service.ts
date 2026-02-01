@@ -6,6 +6,7 @@ import {
 import { UserRole, UserStatus } from '@prisma/client';
 import { compare, hash } from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
+import type { StringValue } from 'jsonwebtoken';
 import { PrismaService } from '../prisma/prisma.service';
 import { normalizeDni } from '../normalize';
 import { LoginDto } from './dto/login.dto';
@@ -18,20 +19,33 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  private getAccessExpiresIn() {
-    return process.env.JWT_ACCESS_EXPIRES_IN ?? '15m';
+  private getAccessExpiresIn(): StringValue | number {
+    return this.asJwtExpires(process.env.JWT_ACCESS_EXPIRES_IN ?? '15m');
   }
 
   private getRefreshSecret() {
     return process.env.JWT_REFRESH_SECRET ?? process.env.JWT_SECRET ?? '';
   }
 
-  private getRefreshExpiresIn() {
-    return process.env.JWT_REFRESH_EXPIRES_IN ?? '7d';
+  private getRefreshExpiresIn(): StringValue | number {
+    return this.asJwtExpires(process.env.JWT_REFRESH_EXPIRES_IN ?? '7d');
   }
 
-  private parseDurationToSeconds(value: string, fallbackSeconds: number) {
+  private asJwtExpires(value: string): StringValue | number {
     const raw = value.trim();
+    if (!raw) return '15m';
+    if (/^\d+$/.test(raw)) return Number(raw);
+    return raw as StringValue;
+  }
+
+  private parseDurationToSeconds(
+    value: string | number,
+    fallbackSeconds: number,
+  ) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    const raw = String(value ?? '').trim();
     if (!raw) return fallbackSeconds;
     if (/^\d+$/.test(raw)) return Number(raw);
     const match = raw.match(/^(\d+)([smhd])$/i);
