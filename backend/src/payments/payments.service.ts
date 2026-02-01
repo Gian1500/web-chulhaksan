@@ -107,11 +107,22 @@ export class PaymentsService {
       : undefined;
     const amount = this.applyLateFee(fee);
 
+    const itemDescription =
+      process.env.MP_ITEM_DESCRIPTION?.trim() ??
+      `Cuota mensual ${fee.month}/${fee.year}`;
+    const categoryId = process.env.MP_ITEM_CATEGORY_ID?.trim();
+    const rawStatementDescriptor = process.env.MP_STATEMENT_DESCRIPTOR?.trim();
+    const statementDescriptor = rawStatementDescriptor
+      ? rawStatementDescriptor.slice(0, 13)
+      : undefined;
+
     const preferenceBody = {
         items: [
           {
             id: fee.id,
             title: `Cuota ${fee.month}/${fee.year}`,
+            description: itemDescription,
+            ...(categoryId ? { category_id: categoryId } : {}),
             quantity: 1,
             currency_id: 'ARS',
             unit_price: Number(amount),
@@ -121,6 +132,9 @@ export class PaymentsService {
         back_urls: backUrls,
         notification_url: notificationWithTeacher,
         ...(canAutoReturn ? { auto_return: 'approved' } : {}),
+        ...(statementDescriptor
+          ? { statement_descriptor: statementDescriptor }
+          : {}),
         external_reference: payment.id,
         metadata: {
           paymentId: payment.id,
