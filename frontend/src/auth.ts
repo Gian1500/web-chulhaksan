@@ -4,6 +4,7 @@ export type AuthProfile = {
   sub: string;
   dni: string;
   role: UserRole;
+  mustChangePassword?: boolean;
 };
 
 const TOKEN_KEY = 'chulhaksan_token';
@@ -73,7 +74,10 @@ export async function login(dni: string, password: string) {
     throw new Error(errorBody.message ?? 'Credenciales inválidas.');
   }
 
-  const data = (await response.json()) as { accessToken: string };
+  const data = (await response.json()) as {
+    accessToken: string;
+    mustChangePassword?: boolean;
+  };
   if (!data?.accessToken) {
     throw new Error('Respuesta inválida del servidor.');
   }

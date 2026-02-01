@@ -5,6 +5,7 @@ import { ListUsersDto } from './dto/list-users.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UserRole, UserStatus } from '@prisma/client';
 import { hash } from 'bcryptjs';
+import { randomBytes } from 'crypto';
 import { normalizeDni } from '../normalize';
 import { UpdateStudentDto } from '../students/dto/update-student.dto';
 import { UpdateTeacherDto } from '../teachers/dto/update-teacher.dto';
@@ -52,7 +53,7 @@ export class AdminService {
     if (dto.role === UserRole.STUDENT) {
       if (!dto.guardianPhone || !dto.gym) {
         throw new BadRequestException(
-          'Guardian phone y gimnasio son obligatorios para alumnos.',
+          'Teléfono del tutor y gimnasio son obligatorios para alumnos.',
         );
       }
     }
@@ -83,6 +84,7 @@ export class AdminService {
           passwordHash,
           role: dto.role,
           status: UserStatus.ACTIVE,
+          mustChangePassword: true,
         },
       });
 
@@ -142,11 +144,40 @@ export class AdminService {
     });
   }
 
+  async resetUserPassword(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
+
+    const temporaryPassword = `CHS-${randomBytes(4).toString('hex')}`;
+    const passwordHash = await hash(temporaryPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, mustChangePassword: true },
+    });
+
+    return { temporaryPassword };
+  }
+
   async listStudents() {
     return this.prisma.student.findMany({
       include: {
         user: {
           select: { id: true, status: true, createdAt: true },
+        },
+        assignments: {
+          where: { active: true },
+          include: {
+            teacher: {
+              select: { id: true, firstName: true, lastName: true },
+            },
+          },
+          orderBy: { startAt: 'desc' },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -214,6 +245,77 @@ export class AdminService {
     });
 
     return { deleted: true };
+  }
+
+  async assignStudentTeacher(dni: string, teacherId: string) {
+    if (!teacherId) {
+      throw new BadRequestException('Profesor inválido.');
+    }
+
+    const normalizedDni = normalizeDni(dni);
+    const student = await this.prisma.student.findUnique({
+      where: { dni: normalizedDni },
+      select: { dni: true },
+    });
+    if (!student) {
+      throw new NotFoundException('Alumno no encontrado.');
+    }
+
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { id: teacherId },
+      select: { id: true },
+    });
+    if (!teacher) {
+      throw new NotFoundException('Profesor no encontrado.');
+    }
+
+    const current = await this.prisma.studentTeacherAssignment.findFirst({
+      where: { studentDni: normalizedDni, active: true },
+      orderBy: { startAt: 'desc' },
+    });
+
+    if (current?.teacherId === teacherId) {
+      return current;
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      if (current) {
+        await tx.studentTeacherAssignment.update({
+          where: { id: current.id },
+          data: { active: false, endAt: new Date() },
+        });
+      }
+      return tx.studentTeacherAssignment.create({
+        data: { studentDni: normalizedDni, teacherId },
+      });
+    });
+  }
+
+  async unassignStudentTeacher(dni: string) {
+    const normalizedDni = normalizeDni(dni);
+    const student = await this.prisma.student.findUnique({
+      where: { dni: normalizedDni },
+      select: { dni: true },
+    });
+    if (!student) {
+      throw new NotFoundException('Alumno no encontrado.');
+    }
+
+    const current = await this.prisma.studentTeacherAssignment.findFirst({
+      where: { studentDni: normalizedDni, active: true },
+      orderBy: { startAt: 'desc' },
+    });
+
+    if (!current) {
+      return { unassigned: false };
+    }
+
+    await this.prisma.studentTeacherAssignment.update({
+      where: { id: current.id },
+      data: { active: false, endAt: new Date() },
+    });
+
+    return { unassigned: true };
   }
 
   async updateStudent(dni: string, dto: UpdateStudentDto) {

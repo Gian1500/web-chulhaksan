@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { apiBaseUrl, getApiHeaders, getToken } from './auth';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { apiBaseUrl, getApiHeaders, getProfile, getToken } from './auth';
 
 type StudentDetailData = {
   dni: string;
@@ -42,16 +42,25 @@ const monthNames = [
 
 export function StudentDetail() {
   const { dni } = useParams();
+  const navigate = useNavigate();
+  const profile = getProfile();
+  const isTeacher = profile?.role === 'TEACHER';
   const [student, setStudent] = useState<StudentDetailData | null>(null);
   const [fees, setFees] = useState<FeeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [marking, setMarking] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<'unassign' | 'delete' | null>(
+    null,
+  );
+  const [resetInfo, setResetInfo] = useState('');
+  const [resetting, setResetting] = useState(false);
+  const [copiedReset, setCopiedReset] = useState(false);
 
   useEffect(() => {
     const token = getToken();
     if (!token || !dni) {
-      setError('Inicia sesion para ver el alumno.');
+      setError('Iniciá sesión para ver el alumno.');
       setLoading(false);
       return;
     }
@@ -131,8 +140,117 @@ export function StudentDetail() {
     }
   };
 
+  const handleUnassign = async () => {
+    const token = getToken();
+    if (!token || !dni) return;
+    if (!confirm('¿Querés desasignar este alumno?')) return;
+    setActionLoading('unassign');
+    setError('');
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/teachers/me/students/${dni}/unassign`,
+        {
+          method: 'POST',
+          headers: getApiHeaders({ token }),
+        },
+      );
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message ?? 'No se pudo desasignar el alumno.');
+      }
+      navigate('/profesor/alumnos');
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'No se pudo desasignar el alumno.';
+      setError(message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    const token = getToken();
+    if (!token || !dni) return;
+    if (!confirm('¿Querés eliminar este alumno? Esta acción no se puede deshacer.')) {
+      return;
+    }
+    setActionLoading('delete');
+    setError('');
+    try {
+      const response = await fetch(`${apiBaseUrl}/teachers/me/students/${dni}`, {
+        method: 'DELETE',
+        headers: getApiHeaders({ token }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message ?? 'No se pudo eliminar el alumno.');
+      }
+      navigate('/profesor/alumnos');
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'No se pudo eliminar el alumno.';
+      setError(message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    const token = getToken();
+    if (!token || !dni) return;
+    if (!confirm('¿Querés resetear la contraseña de este alumno?')) return;
+    setResetting(true);
+    setError('');
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/teachers/me/students/${dni}/reset-password`,
+        {
+          method: 'POST',
+          headers: getApiHeaders({ token }),
+        },
+      );
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message ?? 'No se pudo resetear la contraseña.');
+      }
+      const data = (await response.json()) as { temporaryPassword?: string };
+      if (!data?.temporaryPassword) {
+        throw new Error('No se recibió la contraseña temporal.');
+      }
+      setResetInfo(data.temporaryPassword);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'No se pudo resetear la contraseña.';
+      setError(message);
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const handleCopyReset = async () => {
+    if (!resetInfo) return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(resetInfo);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = resetInfo;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopiedReset(true);
+      setTimeout(() => setCopiedReset(false), 1500);
+    } catch {
+      setCopiedReset(false);
+    }
+  };
+
   return (
-    <div className="relative flex h-auto min-h-screen w-full flex-col max-w-[480px] mx-auto overflow-x-hidden border-x border-gray-200 bg-background-light text-[#1b0d0d]">
+    <div className="relative flex h-auto min-h-screen w-full flex-col max-w-[480px] sm:max-w-[640px] md:max-w-[800px] mx-auto overflow-x-hidden border-x border-gray-200 bg-background-light text-[#1b0d0d]">
       <div className="sticky top-0 z-10 flex items-center bg-background-light/90 backdrop-blur-md p-4 pb-2 justify-between border-b border-gray-100">
         <Link
           className="text-[#1b0d0d] flex size-12 shrink-0 items-center cursor-pointer"
@@ -176,7 +294,7 @@ export function StudentDetail() {
       )}
 
       <h3 className="text-[#1b0d0d] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-2">
-        Informacion Personal
+        Información Personal
       </h3>
 
       <div className="flex items-center gap-4 px-4 min-h-[72px] py-2 border-b border-gray-100">
@@ -199,7 +317,7 @@ export function StudentDetail() {
         </div>
         <div className="flex flex-col justify-center">
           <p className="text-[#1b0d0d] text-base font-medium leading-normal line-clamp-1">
-            Telefono
+            Teléfono
           </p>
           <p className="text-[#9a4c4c] text-sm font-normal leading-normal line-clamp-2">
             {student?.phone ?? '-'}
@@ -227,7 +345,7 @@ export function StudentDetail() {
         </div>
         <div className="flex flex-col justify-center">
           <p className="text-[#1b0d0d] text-base font-medium leading-normal line-clamp-1">
-            Email
+            Correo electrónico
           </p>
           <p className="text-[#9a4c4c] text-sm font-normal leading-normal line-clamp-2">
             {student?.email ?? '-'}
@@ -248,6 +366,58 @@ export function StudentDetail() {
           </p>
         </div>
       </div>
+
+      {isTeacher && (
+        <div className="px-4 pt-4">
+          <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm space-y-3">
+            <p className="text-sm font-semibold">Acciones del profesor</p>
+            <div className="flex flex-col gap-2">
+              <button
+                className="w-full rounded-lg border border-gray-200 text-sm font-semibold py-2.5 text-[#1b0d0d] disabled:opacity-70"
+                type="button"
+                onClick={handleUnassign}
+                disabled={actionLoading !== null}
+              >
+                {actionLoading === 'unassign'
+                  ? 'Desasignando...'
+                  : 'Desasignar alumno'}
+              </button>
+              <button
+                className="w-full rounded-lg border border-gray-200 text-sm font-semibold py-2.5 text-[#1b0d0d] disabled:opacity-70"
+                type="button"
+                onClick={handleResetPassword}
+                disabled={resetting}
+              >
+                {resetting ? 'Reseteando...' : 'Resetear contraseña'}
+              </button>
+              {resetInfo && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 flex items-center justify-between gap-2">
+                  <span>Temporal: {resetInfo}</span>
+                  <button
+                    className={`text-xs font-semibold transition-all ${
+                      copiedReset
+                        ? 'text-green-700 bg-green-100 px-2 py-1 rounded-md scale-[1.03]'
+                        : 'text-amber-700'
+                    }`}
+                    type="button"
+                    onClick={handleCopyReset}
+                  >
+                    {copiedReset ? 'Copiado' : 'Copiar'}
+                  </button>
+                </div>
+              )}
+              <button
+                className="w-full rounded-lg bg-red-600 text-white text-sm font-semibold py-2.5 disabled:opacity-70"
+                type="button"
+                onClick={handleDelete}
+                disabled={actionLoading !== null}
+              >
+                {actionLoading === 'delete' ? 'Eliminando...' : 'Eliminar alumno'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <h3 className="text-[#1b0d0d] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6">
         Estado de Pagos

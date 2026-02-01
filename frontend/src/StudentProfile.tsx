@@ -49,6 +49,9 @@ export function StudentProfile() {
   const [teacher, setTeacher] = useState<TeacherSummary | null>(null);
   const [teacherProfile, setTeacherProfile] =
     useState<TeacherProfileData | null>(null);
+  const [teacherStudentCount, setTeacherStudentCount] = useState<number | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -92,15 +95,28 @@ export function StudentProfile() {
             setTeacher(null);
           }
         } else if (currentProfile.role === 'TEACHER') {
-          const response = await fetch(`${apiBaseUrl}/teachers/me`, {
-            headers: getApiHeaders({ token }),
-          });
-          if (!response.ok) {
-            const body = await response.json().catch(() => ({}));
+          const [teacherResponse, studentsResponse] = await Promise.all([
+            fetch(`${apiBaseUrl}/teachers/me`, {
+              headers: getApiHeaders({ token }),
+            }),
+            fetch(`${apiBaseUrl}/teachers/me/students`, {
+              headers: getApiHeaders({ token }),
+            }),
+          ]);
+
+          if (!teacherResponse.ok) {
+            const body = await teacherResponse.json().catch(() => ({}));
             throw new Error(body.message ?? 'No se pudo cargar el perfil.');
           }
-          const data = (await response.json()) as TeacherProfileData;
+          const data = (await teacherResponse.json()) as TeacherProfileData;
           setTeacherProfile(data);
+
+          if (studentsResponse.ok) {
+            const students = (await studentsResponse.json()) as unknown[];
+            setTeacherStudentCount(Array.isArray(students) ? students.length : 0);
+          } else {
+            setTeacherStudentCount(null);
+          }
         }
       } catch (err) {
         const message =
@@ -143,7 +159,7 @@ export function StudentProfile() {
   return (
     <div className="min-h-screen bg-background-light text-[#1b0d0d]">
       <header className="sticky top-0 z-20 bg-background-light/80 backdrop-blur-md border-b border-gray-200">
-        <div className="flex items-center p-4 justify-between max-w-md mx-auto">
+        <div className="flex items-center p-4 justify-between w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto">
           <Link
             className="text-[#1b0d0d] flex size-10 shrink-0 items-center justify-center"
             to="/dashboard"
@@ -154,7 +170,7 @@ export function StudentProfile() {
             {isTeacher
               ? 'Perfil del Profesor'
               : isAdmin
-                ? 'Perfil del Admin'
+                ? 'Perfil del Administrador'
                 : 'Perfil del Alumno'}
           </h2>
           <div className="flex w-10 items-center justify-end">
@@ -163,7 +179,7 @@ export function StudentProfile() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto pb-24">
+      <main className="w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto pb-24">
         <section className="p-4">
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-4">
             <div
@@ -207,14 +223,14 @@ export function StudentProfile() {
                       ? `Prof. ${teacher.firstName} ${teacher.lastName}`
                       : 'Sin profesor asignado'}
                   </p>
-                  <p className="text-xs text-gray-500">Asignacion actual</p>
+                  <p className="text-xs text-gray-500">Asignación actual</p>
                 </div>
               </div>
             </div>
           </section>
         )}
 
-<section className="px-4 mt-6 space-y-3">
+        <section className="px-4 mt-6 space-y-3">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
             <div className="px-4 py-3 border-b border-gray-100">
               <h3 className="text-base font-bold">Datos Personales</h3>
@@ -240,13 +256,13 @@ export function StudentProfile() {
                     </span>
                   </div>
                   <div className="px-4 py-3 flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Telefono</span>
+                    <span className="text-sm text-gray-500">Teléfono</span>
                     <span className="text-sm font-semibold">
                       {profile?.phone ?? '-'}
                     </span>
                   </div>
                   <div className="px-4 py-3 flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Telefono tutor</span>
+                    <span className="text-sm text-gray-500">Teléfono tutor</span>
                     <span className="text-sm font-semibold">
                       {profile?.guardianPhone ?? '-'}
                     </span>
@@ -258,13 +274,13 @@ export function StudentProfile() {
                     </span>
                   </div>
                   <div className="px-4 py-3 flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Email</span>
+                    <span className="text-sm text-gray-500">Correo electrónico</span>
                     <span className="text-sm font-semibold">
                       {profile?.email ?? '-'}
                     </span>
                   </div>
                   <div className="px-4 py-3 flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Direccion</span>
+                    <span className="text-sm text-gray-500">Dirección</span>
                     <span className="text-sm font-semibold">
                       {profile?.address ?? '-'}
                     </span>
@@ -284,19 +300,25 @@ export function StudentProfile() {
                     </span>
                   </div>
                   <div className="px-4 py-3 flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Telefono</span>
+                    <span className="text-sm text-gray-500">Alumnos asignados</span>
+                    <span className="text-sm font-semibold">
+                      {teacherStudentCount ?? '-'}
+                    </span>
+                  </div>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Teléfono</span>
                     <span className="text-sm font-semibold">
                       {teacherProfile?.phone ?? '-'}
                     </span>
                   </div>
                   <div className="px-4 py-3 flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Email</span>
+                    <span className="text-sm text-gray-500">Correo electrónico</span>
                     <span className="text-sm font-semibold">
                       {teacherProfile?.email ?? '-'}
                     </span>
                   </div>
                   <div className="px-4 py-3 flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Direccion</span>
+                    <span className="text-sm text-gray-500">Dirección</span>
                     <span className="text-sm font-semibold">
                       {teacherProfile?.address ?? '-'}
                     </span>
@@ -317,7 +339,7 @@ export function StudentProfile() {
                   </div>
                 </>
               )}
-{isAdmin && (
+              {isAdmin && (
                 <div className="px-4 py-3 flex items-center justify-between">
                   <span className="text-sm text-gray-500">DNI</span>
                   <span className="text-sm font-semibold">

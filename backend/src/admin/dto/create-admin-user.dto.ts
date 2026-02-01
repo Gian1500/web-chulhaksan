@@ -31,8 +31,9 @@ export class CreateAdminUserDto {
   @Length(1, 60)
   lastName: string;
 
+  @IsOptional()
   @IsEmail()
-  email: string;
+  email?: string;
 
   @IsString()
   @Length(6, 30)
@@ -51,9 +52,10 @@ export class CreateAdminUserDto {
   @IsDateString()
   birthDate: string;
 
+  @IsOptional()
   @IsString()
   @Length(3, 120)
-  address: string;
+  address?: string;
 
   @IsOptional()
   @IsArray()

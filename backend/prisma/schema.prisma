@@ -48,6 +48,7 @@ model User {
   passwordHash String
   role         UserRole
   status       UserStatus @default(PENDING)
+  mustChangePassword Boolean @default(false)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 

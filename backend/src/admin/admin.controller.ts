@@ -31,6 +31,11 @@ export class AdminController {
     return this.adminService.updateUserStatus(id, dto);
   }
 
+  @Post('users/:id/reset-password')
+  resetPassword(@Param('id') id: string) {
+    return this.adminService.resetUserPassword(id);
+  }
+
   @Get('students')
   listStudents() {
     return this.adminService.listStudents();
@@ -39,6 +44,19 @@ export class AdminController {
   @Delete('students/:dni')
   deleteStudent(@Param('dni') dni: string) {
     return this.adminService.deleteStudent(dni);
+  }
+
+  @Post('students/:dni/assign')
+  assignStudent(
+    @Param('dni') dni: string,
+    @Body() body: { teacherId: string },
+  ) {
+    return this.adminService.assignStudentTeacher(dni, body.teacherId);
+  }
+
+  @Post('students/:dni/unassign')
+  unassignStudent(@Param('dni') dni: string) {
+    return this.adminService.unassignStudentTeacher(dni);
   }
 
   @Patch('students/:dni')

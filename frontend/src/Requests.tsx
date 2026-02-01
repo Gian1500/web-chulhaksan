@@ -4,7 +4,7 @@ export function Requests() {
   return (
     <div className="bg-background-light min-h-screen flex flex-col">
       <header className="sticky top-0 z-20 bg-background-light/80 backdrop-blur-md border-b border-gray-200">
-        <div className="flex items-center p-4 justify-between max-w-md mx-auto">
+        <div className="flex items-center p-4 justify-between w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto">
           <Link
             className="text-[#1b0d0d] flex size-10 shrink-0 items-center justify-center"
             to="/profesor/alumnos"
@@ -22,7 +22,7 @@ export function Requests() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-md mx-auto w-full pb-24">
+      <main className="flex-1 w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto pb-24">
         <section className="px-4 py-4">
           <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
             <p className="text-xs uppercase tracking-[0.2em] text-primary font-bold">

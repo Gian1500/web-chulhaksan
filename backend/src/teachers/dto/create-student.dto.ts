@@ -1,4 +1,11 @@
-import { IsDateString, IsEmail, IsString, Length, Matches } from 'class-validator';
+import {
+  IsDateString,
+  IsEmail,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+} from 'class-validator';
 
 export class CreateStudentDto {
   @IsString()
@@ -18,8 +25,9 @@ export class CreateStudentDto {
   @Length(1, 60)
   lastName: string;
 
+  @IsOptional()
   @IsEmail()
-  email: string;
+  email?: string;
 
   @IsString()
   @Length(6, 30)
@@ -36,7 +44,8 @@ export class CreateStudentDto {
   @IsDateString()
   birthDate: string;
 
+  @IsOptional()
   @IsString()
   @Length(3, 120)
-  address: string;
+  address?: string;
 }

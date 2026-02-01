@@ -257,7 +257,7 @@ export class PaymentsService {
       mpPayment.metadata?.feeId ?? mpPayment.external_reference ?? null;
 
     if (!feeId) {
-      throw new BadRequestException('No se encontro feeId en el pago.');
+      throw new BadRequestException('No se encontró feeId en el pago.');
     }
 
     return this.upsertPaymentFromWebhook({
@@ -316,6 +316,14 @@ export class PaymentsService {
       return null;
     }
     const data = raw as Record<string, any>;
+    if (data.manual && data.method === 'cash') {
+      return {
+        id: 'cash',
+        name: 'Efectivo',
+        type: 'cash',
+        last4: null,
+      };
+    }
     const paymentMethod = data.payment_method ?? null;
     const card = data.card ?? null;
 

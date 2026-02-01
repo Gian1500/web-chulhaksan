@@ -18,8 +18,12 @@ export function Login() {
 
     try {
       const token = await login(dni.trim(), password);
-      await fetchMe(token);
-      navigate('/dashboard');
+      const profile = await fetchMe(token);
+      if (profile?.mustChangePassword) {
+        navigate('/cambiar-contrasena');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       const message =
         err instanceof Error
@@ -46,7 +50,7 @@ export function Login() {
       </div>
 
       <div className="flex-1 flex flex-col items-center px-6">
-        <div className="w-full max-w-sm mt-2 mb-8">
+        <div className="w-full max-w-sm sm:max-w-md mt-2 mb-8">
           <div
             aria-label="Logo Chul Hak San"
             className="w-full bg-center bg-no-repeat bg-contain flex flex-col justify-center overflow-hidden bg-transparent min-h-[160px]"
@@ -54,7 +58,7 @@ export function Login() {
           />
         </div>
 
-        <div className="w-full max-w-sm text-center mb-10">
+        <div className="w-full max-w-sm sm:max-w-md text-center mb-10">
           <h2 className="text-[#1a1a2e] text-2xl font-bold tracking-tight mb-3">
             Acceso al Portal
           </h2>
@@ -64,7 +68,7 @@ export function Login() {
           </p>
         </div>
 
-        <form className="w-full max-w-sm flex flex-col gap-5" onSubmit={handleSubmit}>
+        <form className="w-full max-w-sm sm:max-w-md flex flex-col gap-5" onSubmit={handleSubmit}>
           <div className="flex flex-col">
             <label className="flex flex-col w-full">
               <span className="text-[#1a1a2e] text-[12px] font-bold uppercase tracking-[0.05em] mb-2 ml-1 opacity-80">
@@ -137,22 +141,10 @@ export function Login() {
             </button>
           </div>
 
-          <div className="flex justify-center mt-2">
-            <Link
-              className="text-primary text-[15px] font-medium hover:opacity-80 transition-opacity flex items-center gap-1"
-              to="/recuperar"
-            >
-              ¿Olvidó su contraseña?
-            </Link>
-          </div>
         </form>
       </div>
 
-      <div className="pb-10 pt-4 text-center">
-        <div className="mt-8 flex justify-center">
-          <div className="w-32 h-1.5 bg-slate-200 rounded-full" />
-        </div>
-      </div>
+      <div className="pb-10 pt-4 text-center" />
     </div>
   );
 }

@@ -47,6 +47,9 @@ export function PaymentReceiptSuccess() {
   const [payment, setPayment] = useState<PaymentDetails | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const handlePrint = () => {
+    window.print();
+  };
 
   useEffect(() => {
     const token = getToken();
@@ -118,8 +121,8 @@ export function PaymentReceiptSuccess() {
 
   return (
     <div className="bg-background-light min-h-screen flex flex-col items-center">
-      <div className="w-full max-w-[430px] min-h-screen flex flex-col shadow-2xl bg-background-light overflow-hidden">
-        <div className="flex items-center bg-background-light p-4 pb-2 justify-between sticky top-0 z-10">
+      <div className="w-full max-w-[430px] sm:max-w-[560px] md:max-w-[720px] min-h-screen flex flex-col shadow-2xl bg-background-light overflow-hidden">
+        <div className="flex items-center bg-background-light p-4 pb-2 justify-between sticky top-0 z-10 print:hidden">
           <Link
             className="text-background-dark flex size-12 shrink-0 items-center cursor-pointer"
             to="/pagos"
@@ -128,9 +131,10 @@ export function PaymentReceiptSuccess() {
               arrow_back_ios
             </span>
           </Link>
-          <h2 className="text-background-dark text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">
+          <h2 className="text-background-dark text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">
             Comprobante de Pago
           </h2>
+          <div className="size-12 shrink-0" aria-hidden="true"></div>
         </div>
 
         <div className="flex flex-col items-center pt-8 pb-4">
@@ -236,16 +240,11 @@ export function PaymentReceiptSuccess() {
           <button
             className="w-full bg-primary hover:bg-primary/90 text-background-dark font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
             type="button"
+            onClick={handlePrint}
           >
             <span className="material-symbols-outlined">download</span>
             Descargar Comprobante (PDF)
           </button>
-          <Link
-            className="w-full bg-transparent hover:bg-neutral-100 text-neutral-600 font-semibold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
-            to="/pagos"
-          >
-            Volver a Pagos
-          </Link>
         </div>
         <div className="mt-auto h-8"></div>
       </div>

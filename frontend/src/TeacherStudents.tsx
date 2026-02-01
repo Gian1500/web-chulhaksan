@@ -52,11 +52,14 @@ export function TeacherStudents() {
   const [form, setForm] = useState<CreateStudentForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const assignedCount = assigned.length;
+  const availableCount = available.length;
 
   const loadStudents = async () => {
     const token = getToken();
     if (!token) {
-      setError('Inicia sesion para ver tus alumnos.');
+      setError('Iniciá sesión para ver tus alumnos.');
       setLoading(false);
       return;
     }
@@ -211,6 +214,8 @@ export function TeacherStudents() {
         body: JSON.stringify({
           ...form,
           dni: sanitizeDni(form.dni),
+          email: form.email.trim() || null,
+          address: form.address.trim() || null,
           password: form.password || undefined,
         }),
       });
@@ -233,7 +238,7 @@ export function TeacherStudents() {
   const list = activeTab === 'assigned' ? filteredAssigned : filteredAvailable;
 
   return (
-    <div className="relative flex h-full min-h-screen w-full flex-col max-w-[430px] mx-auto bg-background-light shadow-xl overflow-x-hidden">
+    <div className="relative flex h-full min-h-screen w-full flex-col max-w-[430px] sm:max-w-[560px] md:max-w-[720px] mx-auto bg-background-light shadow-xl overflow-x-hidden">
       <header className="sticky top-0 z-10 flex items-center bg-background-light/80 backdrop-blur-md p-4 pb-2 justify-between">
         <div className="flex items-center gap-2">
           <Link
@@ -272,7 +277,7 @@ export function TeacherStudents() {
         </label>
       </div>
 
-      <div className="flex gap-3 px-4 py-2 overflow-x-auto">
+      <div className="flex flex-wrap items-center gap-3 px-4 py-2">
         <button
           className={`flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full px-5 cursor-pointer shadow-md ${
             activeTab === 'assigned'
@@ -295,6 +300,12 @@ export function TeacherStudents() {
         >
           <p className="text-sm font-semibold leading-normal">Disponibles</p>
         </button>
+        <div className="sm:ml-auto flex h-9 shrink-0 items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-4 text-xs font-semibold text-gray-700 shadow-sm">
+          <span className="material-symbols-outlined text-base">groups</span>
+          {activeTab === 'assigned'
+            ? `Asignados: ${assignedCount}`
+            : `Disponibles: ${availableCount}`}
+        </div>
       </div>
 
       <main className="flex-1 px-4 mt-2 pb-24">
@@ -353,18 +364,11 @@ export function TeacherStudents() {
                     }`}
                   >
                     {student.status === 'OK'
-                      ? 'Al dia'
+                      ? 'Al día'
                       : student.status === 'DEBT'
                         ? 'Deuda'
                         : 'Sin estado'}
                   </span>
-                  <button
-                    className="text-[11px] font-semibold text-gray-500 hover:text-primary"
-                    type="button"
-                    onClick={() => handleUnassign(student.dni)}
-                  >
-                    Desasignar
-                  </button>
                 </div>
               </div>
             ))}
@@ -407,7 +411,7 @@ export function TeacherStudents() {
 
       {createOpen && (
         <div className="fixed inset-0 bg-black/40 z-30 flex items-end justify-center">
-          <div className="bg-white w-full max-w-[430px] rounded-t-2xl p-5">
+          <div className="bg-white w-full max-w-[430px] sm:max-w-[520px] md:max-w-[640px] rounded-t-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">Nuevo alumno</h2>
               <button
@@ -424,7 +428,7 @@ export function TeacherStudents() {
                   {createError}
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   placeholder="Nombre"
@@ -459,13 +463,12 @@ export function TeacherStudents() {
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Email"
+                placeholder="Correo electrónico"
                 type="email"
                 value={form.email}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, email: event.target.value }))
                 }
-                required
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -476,27 +479,32 @@ export function TeacherStudents() {
                 }
                 required
               />
+              <div className="relative">
+                <input
+                  className="peer w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  type="date"
+                  placeholder="Fecha de nacimiento"
+                  value={form.birthDate}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, birthDate: event.target.value }))
+                  }
+                  required
+                />
+                <div className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] text-gray-500 opacity-0 shadow-sm transition-opacity peer-focus:opacity-100">
+                  Seleccioná la fecha de nacimiento
+                </div>
+              </div>
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                type="date"
-                value={form.birthDate}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, birthDate: event.target.value }))
-                }
-                required
-              />
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Direccion"
+                placeholder="Dirección"
                 value={form.address}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, address: event.target.value }))
                 }
-                required
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Telefono del alumno"
+                placeholder="Teléfono del alumno"
                 value={form.phone}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, phone: event.target.value }))
@@ -505,7 +513,7 @@ export function TeacherStudents() {
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Telefono tutor"
+                placeholder="Teléfono tutor"
                 value={form.guardianPhone}
                 onChange={(event) =>
                   setForm((prev) => ({
@@ -515,16 +523,28 @@ export function TeacherStudents() {
                 }
                 required
               />
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Contraseña"
-                type="password"
-                value={form.password}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, password: event.target.value }))
-                }
-                required
-              />
+              <div className="relative">
+                <input
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm pr-10"
+                  placeholder="Contraseña"
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, password: event.target.value }))
+                  }
+                  required
+                />
+                <button
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-400"
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                >
+                  <span className="material-symbols-outlined text-lg">
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
+              </div>
               <button
                 className="w-full rounded-lg bg-primary text-white text-sm font-semibold py-3 disabled:opacity-70"
                 type="submit"
@@ -537,28 +557,6 @@ export function TeacherStudents() {
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 h-20 bg-white/90 backdrop-blur-lg border-t border-gray-100 flex items-center justify-around px-6 z-10 max-w-[430px] mx-auto">
-        <Link className="flex flex-col items-center gap-1 text-gray-400" to="/dashboard">
-          <span className="material-symbols-outlined">dashboard</span>
-          <span className="text-[10px] font-medium">Inicio</span>
-        </Link>
-        <div className="flex flex-col items-center gap-1 text-primary" aria-current="page">
-          <span
-            className="material-symbols-outlined"
-            style={{ fontVariationSettings: '\"FILL\" 1' }}
-          >
-            group
-          </span>
-          <span className="text-[10px] font-bold">Alumnos</span>
-        </div>
-        <Link
-          className="flex flex-col items-center gap-1 text-gray-400"
-          to="/login"
-        >
-          <span className="material-symbols-outlined">logout</span>
-          <span className="text-[10px] font-medium">Salir</span>
-        </Link>
-      </nav>
     </div>
   );
 }

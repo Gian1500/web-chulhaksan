@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Home } from './Home';
 import { Login } from './Login';
 import { Payments } from './Payments';
@@ -13,6 +13,7 @@ import { ForgotPassword } from './ForgotPassword';
 import { ForgotPasswordSuccess } from './ForgotPasswordSuccess';
 import { AdminStudents } from './AdminStudents';
 import { AdminTeachers } from './AdminTeachers';
+import { ChangePassword } from './ChangePassword';
 import { getProfile } from './auth';
 
 function AdminRoute({ children }: { children: JSX.Element }) {
@@ -26,39 +27,54 @@ function AdminRoute({ children }: { children: JSX.Element }) {
   return children;
 }
 
+function PasswordGate({ children }: { children: JSX.Element }) {
+  const profile = getProfile();
+  const location = useLocation();
+  if (
+    profile?.mustChangePassword &&
+    location.pathname !== '/cambiar-contrasena'
+  ) {
+    return <Navigate to="/cambiar-contrasena" replace />;
+  }
+  return children;
+}
+
 export function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/pagos" element={<Payments />} />
-        <Route path="/pagos/qr" element={<PaymentQr />} />
-        <Route path="/alumno/:dni" element={<StudentDetail />} />
-        <Route path="/profesor/alumnos" element={<TeacherStudents />} />
-        <Route path="/pagos/exito" element={<PaymentReceiptSuccess />} />
-        <Route path="/pagos/error" element={<PaymentReceiptError />} />
-        <Route path="/perfil" element={<StudentProfile />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/recuperar" element={<ForgotPassword />} />
-        <Route path="/recuperar/enviado" element={<ForgotPasswordSuccess />} />
-        <Route
-          path="/admin/alumnos"
-          element={
-            <AdminRoute>
-              <AdminStudents />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/profesores"
-          element={
-            <AdminRoute>
-              <AdminTeachers />
-            </AdminRoute>
-          }
-        />
-      </Routes>
+      <PasswordGate>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/cambiar-contrasena" element={<ChangePassword />} />
+          <Route path="/pagos" element={<Payments />} />
+          <Route path="/pagos/qr" element={<PaymentQr />} />
+          <Route path="/alumno/:dni" element={<StudentDetail />} />
+          <Route path="/profesor/alumnos" element={<TeacherStudents />} />
+          <Route path="/pagos/exito" element={<PaymentReceiptSuccess />} />
+          <Route path="/pagos/error" element={<PaymentReceiptError />} />
+          <Route path="/perfil" element={<StudentProfile />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/recuperar" element={<ForgotPassword />} />
+          <Route path="/recuperar/enviado" element={<ForgotPasswordSuccess />} />
+          <Route
+            path="/admin/alumnos"
+            element={
+              <AdminRoute>
+                <AdminStudents />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/profesores"
+            element={
+              <AdminRoute>
+                <AdminTeachers />
+              </AdminRoute>
+            }
+          />
+        </Routes>
+      </PasswordGate>
     </BrowserRouter>
   );
 }

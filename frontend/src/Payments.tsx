@@ -148,7 +148,7 @@ export function Payments() {
   return (
     <div className="min-h-screen bg-background-light text-[#1b0d0d]">
       <header className="sticky top-0 z-50 bg-background-light/80 backdrop-blur-md border-b border-gray-200">
-        <div className="flex items-center p-4 justify-between max-w-md mx-auto">
+        <div className="flex items-center p-4 justify-between w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto">
           <Link
             className="text-[#1b0d0d] flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
             to="/dashboard"
@@ -161,7 +161,7 @@ export function Payments() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto pb-24">
+      <main className="w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto pb-24">
         <section className="p-4">
           <div className="bg-white rounded-xl p-5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)] flex items-center gap-4">
             <div className="relative">
@@ -195,6 +195,23 @@ export function Payments() {
             Ciclo Actual
           </span>
         </div>
+
+        <section className="mt-4 px-4">
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+            <div className="flex gap-3">
+              <span className="material-symbols-outlined text-primary">info</span>
+              <div>
+                <p className="text-sm font-bold text-primary">
+                  Información de Cobro
+                </p>
+                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                  Las cuotas vencen el día 10 de cada mes. Desde el día 11 el
+                  importe incluye un recargo fijo de $5000 (no acumulativo).
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <div className="mt-4 px-4 space-y-4">
           {loading && (
@@ -320,33 +337,17 @@ export function Payments() {
           })}
         </div>
 
-        <section className="mt-8 px-4">
-          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
-            <div className="flex gap-3">
-              <span className="material-symbols-outlined text-primary">info</span>
-              <div>
-                <p className="text-sm font-bold text-primary">
-                  Información de Cobro
-                </p>
-                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                  Las cuotas vencen el día 10 de cada mes. Desde el día 11 el
-                  importe incluye un recargo fijo de $5000 (no acumulativo).
-                </p>
-              </div>
-            </div>
-          </div>
-
         <section className="mt-6 px-4 pb-6">
           <h3 className="text-sm font-bold text-[#1b0d0d] mb-3">
             Pagos realizados
           </h3>
           {paymentHistory.length === 0 ? (
             <div className="bg-white rounded-xl p-4 border border-gray-100 text-sm text-gray-600">
-              Todav??a no hay pagos registrados.
+              Todavía no hay pagos registrados.
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <div className="grid grid-cols-[1.2fr_1fr_0.8fr] gap-2 px-4 py-2 bg-gray-50 text-[11px] font-semibold text-gray-500 uppercase">
+              <div className="hidden sm:grid grid-cols-[1.2fr_1fr_0.8fr] gap-2 px-4 py-2 bg-gray-50 text-[11px] font-semibold text-gray-500 uppercase">
                 <span>Periodo</span>
                 <span>Fecha</span>
                 <span className="text-right">Importe</span>
@@ -355,9 +356,12 @@ export function Payments() {
                 {paymentHistory.map((item) => (
                   <div
                     key={item.paymentId ?? item.feeId}
-                    className="grid grid-cols-[1.2fr_1fr_0.8fr] gap-2 px-4 py-3 text-sm text-gray-700"
+                    className="grid grid-cols-1 sm:grid-cols-[1.2fr_1fr_0.8fr] gap-2 px-4 py-3 text-sm text-gray-700"
                   >
                     <div className="flex flex-col">
+                      <span className="text-[10px] uppercase font-semibold text-gray-400 sm:hidden">
+                        Periodo
+                      </span>
                       <span className="font-semibold">
                         {item.monthLabel} {item.year}
                       </span>
@@ -365,47 +369,31 @@ export function Payments() {
                         {item.status}
                       </span>
                     </div>
-                    <span className="text-xs text-gray-500">
-                      {item.paidAt
-                        ? item.paidAt.toLocaleDateString('es-AR')
-                        : 'Sin fecha'}
-                    </span>
-                    <span className="text-right font-semibold">
-                      ${item.amount.toLocaleString('es-AR')}
-                    </span>
+                    <div className="flex items-center justify-between sm:block">
+                      <span className="text-[10px] uppercase font-semibold text-gray-400 sm:hidden">
+                        Fecha
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {item.paidAt
+                          ? item.paidAt.toLocaleDateString('es-AR')
+                          : 'Sin fecha'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between sm:block">
+                      <span className="text-[10px] uppercase font-semibold text-gray-400 sm:hidden">
+                        Importe
+                      </span>
+                      <span className="text-right font-semibold">
+                        ${item.amount.toLocaleString('es-AR')}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
         </section>
-        </section>
       </main>
-
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-200 pb-6 pt-2">
-        <div className="max-w-md mx-auto flex justify-around items-center">
-          <Link className="flex flex-col items-center gap-1 text-gray-400" to="/dashboard">
-            <span className="material-symbols-outlined">home</span>
-            <span className="text-[10px] font-medium">Inicio</span>
-          </Link>
-          <button className="flex flex-col items-center gap-1 text-primary" type="button">
-            <span
-              className="material-symbols-outlined"
-              style={{ fontVariationSettings: '"FILL" 1' }}
-            >
-              account_balance_wallet
-            </span>
-            <span className="text-[10px] font-bold">Pagos</span>
-          </button>
-          <Link
-            className="flex flex-col items-center gap-1 text-gray-400"
-            to="/perfil"
-          >
-            <span className="material-symbols-outlined">person</span>
-            <span className="text-[10px] font-medium">Perfil</span>
-          </Link>
-        </div>
-      </nav>
     </div>
   );
 }
