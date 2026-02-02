@@ -23,21 +23,24 @@ export class CreateAdminUserDto {
   @IsEnum(UserRole)
   role: UserRole;
 
+  @IsOptional()
   @IsString()
   @Length(1, 60)
-  firstName: string;
+  firstName?: string;
 
+  @IsOptional()
   @IsString()
   @Length(1, 60)
-  lastName: string;
+  lastName?: string;
 
   @IsOptional()
   @IsEmail()
   email?: string;
 
+  @IsOptional()
   @IsString()
   @Length(6, 30)
-  phone: string;
+  phone?: string;
 
   @IsOptional()
   @IsString()
@@ -49,8 +52,9 @@ export class CreateAdminUserDto {
   @Length(2, 80)
   gym?: string;
 
+  @IsOptional()
   @IsDateString()
-  birthDate: string;
+  birthDate?: string;
 
   @IsOptional()
   @IsString()

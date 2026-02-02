@@ -17,32 +17,38 @@ export class CreateStudentDto {
   @Length(6, 64)
   password: string;
 
+  @IsOptional()
   @IsString()
   @Length(1, 60)
-  firstName: string;
+  firstName?: string;
 
+  @IsOptional()
   @IsString()
   @Length(1, 60)
-  lastName: string;
+  lastName?: string;
 
   @IsOptional()
   @IsEmail()
   email?: string;
 
+  @IsOptional()
   @IsString()
   @Length(6, 30)
-  phone: string;
+  phone?: string;
 
+  @IsOptional()
   @IsString()
   @Length(6, 30)
-  guardianPhone: string;
+  guardianPhone?: string;
 
+  @IsOptional()
   @IsString()
   @Length(2, 80)
-  gym: string;
+  gym?: string;
 
+  @IsOptional()
   @IsDateString()
-  birthDate: string;
+  birthDate?: string;
 
   @IsOptional()
   @IsString()

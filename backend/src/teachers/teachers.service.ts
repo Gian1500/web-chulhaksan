@@ -194,6 +194,14 @@ export class TeachersService {
 
     const passwordValue = dto.password.trim();
     const passwordHash = await hash(passwordValue, 10);
+    const firstName = dto.firstName?.trim() || 'Sin nombre';
+    const lastName = dto.lastName?.trim() || 'Sin apellido';
+    const email = dto.email?.trim() || null;
+    const phone = dto.phone?.trim() || null;
+    const guardianPhone = dto.guardianPhone?.trim() || null;
+    const gym = dto.gym?.trim() || null;
+    const address = dto.address?.trim() || null;
+    const birthDateValue = dto.birthDate?.trim();
 
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -210,14 +218,14 @@ export class TeachersService {
         data: {
           dni: normalizedDni,
           userId: user.id,
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          email: dto.email,
-          phone: dto.phone,
-          guardianPhone: dto.guardianPhone,
-          gym: dto.gym,
-          birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
-          address: dto.address,
+          firstName,
+          lastName,
+          email,
+          phone,
+          guardianPhone,
+          gym,
+          birthDate: birthDateValue ? new Date(birthDateValue) : undefined,
+          address,
         },
       });
 

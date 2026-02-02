@@ -173,11 +173,16 @@ export function TeacherStudents() {
         method: 'POST',
         json: true,
         body: JSON.stringify({
-          ...form,
           dni: sanitizeDni(form.dni),
+          password: form.password,
+          firstName: form.firstName.trim() || null,
+          lastName: form.lastName.trim() || null,
           email: form.email.trim() || null,
+          phone: form.phone.trim() || null,
+          guardianPhone: form.guardianPhone.trim() || null,
+          gym: form.gym.trim() || null,
+          birthDate: form.birthDate.trim() || null,
           address: form.address.trim() || null,
-          password: form.password || undefined,
         }),
       });
       if (!response.ok) {
@@ -397,7 +402,6 @@ export function TeacherStudents() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, firstName: event.target.value }))
                   }
-                  required
                 />
                 <input
                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -406,7 +410,6 @@ export function TeacherStudents() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, lastName: event.target.value }))
                   }
-                  required
                 />
               </div>
               <input
@@ -438,7 +441,6 @@ export function TeacherStudents() {
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, gym: event.target.value }))
                 }
-                required
               />
               <div className="relative">
                 <input
@@ -449,7 +451,6 @@ export function TeacherStudents() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, birthDate: event.target.value }))
                   }
-                  required
                 />
                 <div className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] text-gray-500 opacity-0 shadow-sm transition-opacity peer-focus:opacity-100">
                   Seleccioná la fecha de nacimiento
@@ -470,7 +471,6 @@ export function TeacherStudents() {
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, phone: event.target.value }))
                 }
-                required
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -482,7 +482,6 @@ export function TeacherStudents() {
                     guardianPhone: event.target.value,
                   }))
                 }
-                required
               />
               <div className="relative">
                 <input

@@ -50,15 +50,16 @@ export class AdminService {
       throw new BadRequestException('No puedes crear admin desde aqui.');
     }
 
-    if (dto.role === UserRole.STUDENT) {
-      if (!dto.guardianPhone || !dto.gym) {
-        throw new BadRequestException(
-          'Teléfono del tutor y gimnasio son obligatorios para alumnos.',
-        );
-      }
-    }
-
     if (dto.role === UserRole.TEACHER) {
+      if (!dto.firstName?.trim() || !dto.lastName?.trim()) {
+        throw new BadRequestException('Nombre y apellido son obligatorios.');
+      }
+      if (!dto.phone?.trim()) {
+        throw new BadRequestException('El teléfono es obligatorio.');
+      }
+      if (!dto.birthDate?.trim()) {
+        throw new BadRequestException('La fecha de nacimiento es obligatoria.');
+      }
       if (!dto.gyms || dto.gyms.length === 0) {
         throw new BadRequestException(
           'Los gimnasios son obligatorios para profesores.',
@@ -76,6 +77,16 @@ export class AdminService {
     }
 
     const passwordHash = await hash(dto.password, 10);
+    const firstName =
+      dto.firstName?.trim() || (dto.role === UserRole.STUDENT ? 'Sin nombre' : '');
+    const lastName =
+      dto.lastName?.trim() || (dto.role === UserRole.STUDENT ? 'Sin apellido' : '');
+    const email = dto.email?.trim() || null;
+    const phone = dto.phone?.trim() || null;
+    const guardianPhone = dto.guardianPhone?.trim() || null;
+    const gym = dto.gym?.trim() || null;
+    const address = dto.address?.trim() || null;
+    const birthDateValue = dto.birthDate?.trim();
 
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -93,14 +104,14 @@ export class AdminService {
           data: {
             dni: normalizedDni,
             userId: user.id,
-            firstName: dto.firstName,
-            lastName: dto.lastName,
-            email: dto.email,
-            phone: dto.phone,
-            guardianPhone: dto.guardianPhone,
-            gym: dto.gym,
-            birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
-            address: dto.address,
+            firstName,
+            lastName,
+            email,
+            phone,
+            guardianPhone,
+            gym,
+            birthDate: birthDateValue ? new Date(birthDateValue) : undefined,
+            address,
           },
         });
       }
@@ -109,12 +120,12 @@ export class AdminService {
         await tx.teacher.create({
           data: {
             userId: user.id,
-            firstName: dto.firstName,
-            lastName: dto.lastName,
-            email: dto.email,
-            phone: dto.phone,
-            birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
-            address: dto.address,
+            firstName,
+            lastName,
+            email,
+            phone,
+            birthDate: birthDateValue ? new Date(birthDateValue) : undefined,
+            address,
             gyms: dto.gyms ?? [],
           },
         });
