@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateAdminUserDto } from './dto/create-admin-user.dto';
 import { ListUsersDto } from './dto/list-users.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
-import { UserRole, UserStatus } from '@prisma/client';
+import { Prisma, UserRole, UserStatus } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { normalizeDni } from '../normalize';
@@ -25,10 +25,38 @@ export class AdminService {
     if (filters?.search) {
       where.OR = [
         { dni: { contains: filters.search } },
-        { student: { firstName: { contains: filters.search, mode: 'insensitive' } } },
-        { student: { lastName: { contains: filters.search, mode: 'insensitive' } } },
-        { teacher: { firstName: { contains: filters.search, mode: 'insensitive' } } },
-        { teacher: { lastName: { contains: filters.search, mode: 'insensitive' } } },
+        {
+          student: {
+            firstName: {
+              contains: filters.search,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+        },
+        {
+          student: {
+            lastName: {
+              contains: filters.search,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+        },
+        {
+          teacher: {
+            firstName: {
+              contains: filters.search,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+        },
+        {
+          teacher: {
+            lastName: {
+              contains: filters.search,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+        },
       ];
     }
 
@@ -175,35 +203,81 @@ export class AdminService {
     return { temporaryPassword };
   }
 
-  async listStudents() {
-    return this.prisma.student.findMany({
-      include: {
-        user: {
-          select: { id: true, status: true, createdAt: true },
-        },
-        assignments: {
-          where: { active: true },
-          include: {
-            teacher: {
-              select: { id: true, firstName: true, lastName: true },
-            },
+  async listStudents(params?: { page?: number; limit?: number; search?: string }) {
+    const page = Math.max(1, params?.page ?? 1);
+    const limit = Math.max(1, params?.limit ?? 10);
+    const skip = (page - 1) * limit;
+    const search = params?.search?.trim();
+
+    const where: Prisma.StudentWhereInput | undefined = search
+      ? {
+          OR: [
+            { dni: { contains: search } },
+            { firstName: { contains: search, mode: Prisma.QueryMode.insensitive } },
+            { lastName: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          ],
+        }
+      : undefined;
+
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.student.count({ where }),
+      this.prisma.student.findMany({
+        where,
+        include: {
+          user: {
+            select: { id: true, status: true, createdAt: true },
           },
-          orderBy: { startAt: 'desc' },
+          assignments: {
+            where: { active: true },
+            include: {
+              teacher: {
+                select: { id: true, firstName: true, lastName: true },
+              },
+            },
+            orderBy: { startAt: 'desc' },
+          },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    return { data, total, page, limit };
   }
 
-  async listTeachers() {
-    return this.prisma.teacher.findMany({
-      include: {
-        user: {
-          select: { id: true, dni: true, status: true, createdAt: true },
+  async listTeachers(params?: { page?: number; limit?: number; search?: string }) {
+    const page = Math.max(1, params?.page ?? 1);
+    const limit = Math.max(1, params?.limit ?? 10);
+    const skip = (page - 1) * limit;
+    const search = params?.search?.trim();
+
+    const where: Prisma.TeacherWhereInput | undefined = search
+      ? {
+          OR: [
+            { firstName: { contains: search, mode: Prisma.QueryMode.insensitive } },
+            { lastName: { contains: search, mode: Prisma.QueryMode.insensitive } },
+            { user: { dni: { contains: search } } },
+          ],
+        }
+      : undefined;
+
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.teacher.count({ where }),
+      this.prisma.teacher.findMany({
+        where,
+        include: {
+          user: {
+            select: { id: true, dni: true, status: true, createdAt: true },
+          },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    return { data, total, page, limit };
   }
 
   async deleteStudent(dni: string) {

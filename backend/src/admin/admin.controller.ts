@@ -9,6 +9,7 @@ import { ListUsersDto } from './dto/list-users.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UpdateStudentDto } from '../students/dto/update-student.dto';
 import { UpdateTeacherDto } from '../teachers/dto/update-teacher.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -37,8 +38,8 @@ export class AdminController {
   }
 
   @Get('students')
-  listStudents() {
-    return this.adminService.listStudents();
+  listStudents(@Query() query: PaginationDto) {
+    return this.adminService.listStudents(query);
   }
 
   @Delete('students/:dni')
@@ -65,8 +66,8 @@ export class AdminController {
   }
 
   @Get('teachers')
-  listTeachers() {
-    return this.adminService.listTeachers();
+  listTeachers(@Query() query: PaginationDto) {
+    return this.adminService.listTeachers(query);
   }
 
   @Delete('teachers/:id')

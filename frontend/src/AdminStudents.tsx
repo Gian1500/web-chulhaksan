@@ -74,6 +74,9 @@ export function AdminStudents() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const pageSize = 5;
   const [editing, setEditing] = useState<AdminStudent | null>(null);
   const [form, setForm] = useState<StudentForm>(emptyForm);
   const [assignedTeacherId, setAssignedTeacherId] = useState('');
@@ -94,7 +97,14 @@ export function AdminStudents() {
     setLoading(true);
     setError('');
     try {
-      const response = await apiFetch('/admin/students', {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(pageSize),
+      });
+      if (query.trim()) {
+        params.set('search', query.trim());
+      }
+      const response = await apiFetch(`/admin/students?${params.toString()}`, {
         method: 'GET',
         cache: 'no-store',
       });
@@ -102,9 +112,16 @@ export function AdminStudents() {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.message ?? 'No se pudo cargar el listado.');
       }
-      const data = (await response.json()) as AdminStudent[] | { data?: AdminStudent[] };
-      const list = Array.isArray(data) ? data : data?.data ?? [];
+      const payload = (await response.json()) as
+        | AdminStudent[]
+        | { data?: AdminStudent[]; total?: number; page?: number; limit?: number };
+      const list = Array.isArray(payload) ? payload : payload?.data ?? [];
       setStudents(list);
+      if (!Array.isArray(payload)) {
+        setTotal(payload?.total ?? list.length);
+      } else {
+        setTotal(list.length);
+      }
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'No se pudo cargar el listado.';
@@ -116,7 +133,7 @@ export function AdminStudents() {
 
   const loadTeachers = async () => {
     try {
-      const response = await apiFetch('/admin/teachers', {
+      const response = await apiFetch('/admin/teachers?page=1&limit=1000', {
         method: 'GET',
         cache: 'no-store',
       });
@@ -133,18 +150,24 @@ export function AdminStudents() {
   };
 
   useEffect(() => {
-    loadStudents();
     loadTeachers();
   }, []);
 
-  const filtered = useMemo(() => {
-    if (!query.trim()) return students;
-    const value = query.toLowerCase();
-    return students.filter((student) => {
-      const name = `${student.firstName} ${student.lastName}`.toLowerCase();
-      return name.includes(value) || student.dni.includes(value);
-    });
-  }, [students, query]);
+  useEffect(() => {
+    loadStudents();
+  }, [page, query]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query]);
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pageStart = Math.max(1, Math.min(page - 2, totalPages - 4));
+  const pageEnd = Math.min(totalPages, pageStart + 4);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const activeTeachers = useMemo(
     () =>
@@ -397,7 +420,7 @@ export function AdminStudents() {
             <p className="text-xs uppercase tracking-[0.2em] text-primary font-bold">
               Total alumnos
             </p>
-            <p className="text-2xl font-bold text-[#1b0d0d]">{students.length}</p>
+            <p className="text-2xl font-bold text-[#1b0d0d]">{total}</p>
           </div>
           <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
             <span className="material-symbols-outlined">group</span>
@@ -427,14 +450,14 @@ export function AdminStudents() {
             {error}
           </div>
         )}
-        {!loading && !error && filtered.length === 0 && (
+        {!loading && !error && students.length === 0 && (
           <div className="bg-white p-4 rounded-xl text-sm text-gray-500 border border-gray-100">
             No hay alumnos para mostrar.
           </div>
         )}
 
         <div className="flex flex-col gap-3">
-          {filtered.map((student) => (
+          {students.map((student) => (
             <div
               key={student.dni}
               className="flex items-center gap-4 bg-white p-3 rounded-xl justify-between shadow-sm"
@@ -476,6 +499,46 @@ export function AdminStudents() {
             </div>
           ))}
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <button
+              className="h-9 px-3 rounded-full border border-gray-200 text-xs font-semibold text-[#1b0d0d] disabled:opacity-40"
+              type="button"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={page === 1}
+            >
+              Anterior
+            </button>
+            <div className="flex items-center gap-1">
+              {Array.from(
+                { length: pageEnd - pageStart + 1 },
+                (_, index) => pageStart + index,
+              ).map((number) => (
+                <button
+                  key={number}
+                  className={`h-9 w-9 rounded-full text-xs font-semibold ${
+                    page === number
+                      ? 'bg-primary text-white'
+                      : 'border border-gray-200 text-[#1b0d0d]'
+                  }`}
+                  type="button"
+                  onClick={() => setPage(number)}
+                >
+                  {number}
+                </button>
+              ))}
+            </div>
+            <button
+              className="h-9 px-3 rounded-full border border-gray-200 text-xs font-semibold text-[#1b0d0d] disabled:opacity-40"
+              type="button"
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              disabled={page === totalPages}
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
       </main>
 
       {editing && (

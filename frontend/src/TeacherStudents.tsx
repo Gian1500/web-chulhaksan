@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from './auth';
 
@@ -53,16 +53,39 @@ export function TeacherStudents() {
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const assignedCount = assigned.length;
-  const availableCount = available.length;
+  const [pageAssigned, setPageAssigned] = useState(1);
+  const [pageAvailable, setPageAvailable] = useState(1);
+  const pageSize = 5;
+  const [totalAssigned, setTotalAssigned] = useState(0);
+  const [totalAvailable, setTotalAvailable] = useState(0);
+  const assignedCount = totalAssigned;
+  const availableCount = totalAvailable;
 
   const loadStudents = async () => {
     setLoading(true);
     setError('');
     try {
+      const assignedParams = new URLSearchParams({
+        page: String(pageAssigned),
+        limit: String(pageSize),
+      });
+      const availableParams = new URLSearchParams({
+        page: String(pageAvailable),
+        limit: String(pageSize),
+      });
+      if (query.trim()) {
+        assignedParams.set('search', query.trim());
+        availableParams.set('search', query.trim());
+      }
       const [assignedResponse, availableResponse] = await Promise.all([
-        apiFetch('/teachers/me/students', { method: 'GET' }),
-        apiFetch('/teachers/me/available-students', { method: 'GET' }),
+        apiFetch(`/teachers/me/students?${assignedParams.toString()}`, {
+          method: 'GET',
+          cache: 'no-store',
+        }),
+        apiFetch(`/teachers/me/available-students?${availableParams.toString()}`, {
+          method: 'GET',
+          cache: 'no-store',
+        }),
       ]);
 
       if (!assignedResponse.ok) {
@@ -75,8 +98,24 @@ export function TeacherStudents() {
         throw new Error(body.message ?? 'No se pudo cargar el listado.');
       }
 
-      const assignedData = (await assignedResponse.json()) as StudentItem[];
-      const availableData = (await availableResponse.json()) as StudentItem[];
+      const assignedPayload = (await assignedResponse.json()) as
+        | StudentItem[]
+        | { data?: StudentItem[]; total?: number; page?: number; limit?: number };
+      const availablePayload = (await availableResponse.json()) as
+        | StudentItem[]
+        | { data?: StudentItem[]; total?: number; page?: number; limit?: number };
+      const assignedData = Array.isArray(assignedPayload)
+        ? assignedPayload
+        : assignedPayload?.data ?? [];
+      const availableData = Array.isArray(availablePayload)
+        ? availablePayload
+        : availablePayload?.data ?? [];
+      const assignedTotal = Array.isArray(assignedPayload)
+        ? assignedData.length
+        : assignedPayload?.total ?? assignedData.length;
+      const availableTotal = Array.isArray(availablePayload)
+        ? availableData.length
+        : availablePayload?.total ?? availableData.length;
 
       const baseAssigned = (assignedData ?? []).map((student) => ({
         ...student,
@@ -84,6 +123,8 @@ export function TeacherStudents() {
       }));
       setAssigned(baseAssigned);
       setAvailable(availableData ?? []);
+      setTotalAssigned(assignedTotal);
+      setTotalAvailable(availableTotal);
 
       const statusResults = await Promise.all(
         baseAssigned.map(async (student) => {
@@ -121,27 +162,9 @@ export function TeacherStudents() {
 
   useEffect(() => {
     loadStudents();
-  }, []);
+  }, [pageAssigned, pageAvailable, query]);
 
   const sanitizeDni = (value: string) => value.replace(/\D/g, '');
-
-  const filteredAssigned = useMemo(() => {
-    if (!query.trim()) return assigned;
-    const value = query.toLowerCase();
-    return assigned.filter((student) => {
-      const name = `${student.firstName} ${student.lastName}`.toLowerCase();
-      return name.includes(value) || student.dni.includes(value);
-    });
-  }, [assigned, query]);
-
-  const filteredAvailable = useMemo(() => {
-    if (!query.trim()) return available;
-    const value = query.toLowerCase();
-    return available.filter((student) => {
-      const name = `${student.firstName} ${student.lastName}`.toLowerCase();
-      return name.includes(value) || student.dni.includes(value);
-    });
-  }, [available, query]);
 
   const handleAssign = async (dni: string) => {
     try {
@@ -201,7 +224,40 @@ export function TeacherStudents() {
     }
   };
 
-  const list = activeTab === 'assigned' ? filteredAssigned : filteredAvailable;
+  const totalPagesAssigned = Math.max(1, Math.ceil(totalAssigned / pageSize));
+  const totalPagesAvailable = Math.max(1, Math.ceil(totalAvailable / pageSize));
+  const pageStartAssigned = Math.max(
+    1,
+    Math.min(pageAssigned - 2, totalPagesAssigned - 4),
+  );
+  const pageEndAssigned = Math.min(totalPagesAssigned, pageStartAssigned + 4);
+  const pageStartAvailable = Math.max(
+    1,
+    Math.min(pageAvailable - 2, totalPagesAvailable - 4),
+  );
+  const pageEndAvailable = Math.min(
+    totalPagesAvailable,
+    pageStartAvailable + 4,
+  );
+
+  useEffect(() => {
+    setPageAssigned(1);
+    setPageAvailable(1);
+  }, [query, activeTab]);
+
+  useEffect(() => {
+    if (pageAssigned > totalPagesAssigned) {
+      setPageAssigned(totalPagesAssigned);
+    }
+  }, [pageAssigned, totalPagesAssigned]);
+
+  useEffect(() => {
+    if (pageAvailable > totalPagesAvailable) {
+      setPageAvailable(totalPagesAvailable);
+    }
+  }, [pageAvailable, totalPagesAvailable]);
+
+  const list = activeTab === 'assigned' ? assigned : available;
 
   return (
     <div className="relative flex h-full min-h-screen w-full flex-col max-w-[430px] sm:max-w-[560px] md:max-w-[720px] mx-auto bg-background-light shadow-xl overflow-x-hidden">
@@ -373,6 +429,98 @@ export function TeacherStudents() {
               </div>
             ))}
         </div>
+
+        {activeTab === 'assigned' && totalPagesAssigned > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-3">
+            <button
+              className="h-9 px-3 rounded-full border border-gray-200 text-xs font-semibold text-[#1b0d0d] disabled:opacity-40"
+              type="button"
+              onClick={() =>
+                setPageAssigned((current) => Math.max(1, current - 1))
+              }
+              disabled={pageAssigned === 1}
+            >
+              Anterior
+            </button>
+            <div className="flex items-center gap-1">
+              {Array.from(
+                { length: pageEndAssigned - pageStartAssigned + 1 },
+                (_, index) => pageStartAssigned + index,
+              ).map((number) => (
+                <button
+                  key={number}
+                  className={`h-9 w-9 rounded-full text-xs font-semibold ${
+                    pageAssigned === number
+                      ? 'bg-primary text-white'
+                      : 'border border-gray-200 text-[#1b0d0d]'
+                  }`}
+                  type="button"
+                  onClick={() => setPageAssigned(number)}
+                >
+                  {number}
+                </button>
+              ))}
+            </div>
+            <button
+              className="h-9 px-3 rounded-full border border-gray-200 text-xs font-semibold text-[#1b0d0d] disabled:opacity-40"
+              type="button"
+              onClick={() =>
+                setPageAssigned((current) =>
+                  Math.min(totalPagesAssigned, current + 1),
+                )
+              }
+              disabled={pageAssigned === totalPagesAssigned}
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'available' && totalPagesAvailable > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-3">
+            <button
+              className="h-9 px-3 rounded-full border border-gray-200 text-xs font-semibold text-[#1b0d0d] disabled:opacity-40"
+              type="button"
+              onClick={() =>
+                setPageAvailable((current) => Math.max(1, current - 1))
+              }
+              disabled={pageAvailable === 1}
+            >
+              Anterior
+            </button>
+            <div className="flex items-center gap-1">
+              {Array.from(
+                { length: pageEndAvailable - pageStartAvailable + 1 },
+                (_, index) => pageStartAvailable + index,
+              ).map((number) => (
+                <button
+                  key={number}
+                  className={`h-9 w-9 rounded-full text-xs font-semibold ${
+                    pageAvailable === number
+                      ? 'bg-primary text-white'
+                      : 'border border-gray-200 text-[#1b0d0d]'
+                  }`}
+                  type="button"
+                  onClick={() => setPageAvailable(number)}
+                >
+                  {number}
+                </button>
+              ))}
+            </div>
+            <button
+              className="h-9 px-3 rounded-full border border-gray-200 text-xs font-semibold text-[#1b0d0d] disabled:opacity-40"
+              type="button"
+              onClick={() =>
+                setPageAvailable((current) =>
+                  Math.min(totalPagesAvailable, current + 1),
+                )
+              }
+              disabled={pageAvailable === totalPagesAvailable}
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
       </main>
 
       {createOpen && (

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from './auth';
 
@@ -55,6 +55,9 @@ export function AdminTeachers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const pageSize = 5;
   const [editing, setEditing] = useState<AdminTeacher | null>(null);
   const [form, setForm] = useState<TeacherForm>(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -72,7 +75,14 @@ export function AdminTeachers() {
     setLoading(true);
     setError('');
     try {
-      const response = await apiFetch('/admin/teachers', {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(pageSize),
+      });
+      if (query.trim()) {
+        params.set('search', query.trim());
+      }
+      const response = await apiFetch(`/admin/teachers?${params.toString()}`, {
         method: 'GET',
         cache: 'no-store',
       });
@@ -80,9 +90,16 @@ export function AdminTeachers() {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.message ?? 'No se pudo cargar el listado.');
       }
-      const data = (await response.json()) as AdminTeacher[] | { data?: AdminTeacher[] };
-      const list = Array.isArray(data) ? data : data?.data ?? [];
+      const payload = (await response.json()) as
+        | AdminTeacher[]
+        | { data?: AdminTeacher[]; total?: number; page?: number; limit?: number };
+      const list = Array.isArray(payload) ? payload : payload?.data ?? [];
       setTeachers(list);
+      if (!Array.isArray(payload)) {
+        setTotal(payload?.total ?? list.length);
+      } else {
+        setTotal(list.length);
+      }
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'No se pudo cargar el listado.';
@@ -94,17 +111,19 @@ export function AdminTeachers() {
 
   useEffect(() => {
     loadTeachers();
-  }, []);
+  }, [page, query]);
 
-  const filtered = useMemo(() => {
-    if (!query.trim()) return teachers;
-    const value = query.toLowerCase();
-    return teachers.filter((teacher) => {
-      const name = `${teacher.firstName} ${teacher.lastName}`.toLowerCase();
-      const dni = teacher.user?.dni ?? '';
-      return name.includes(value) || dni.includes(value);
-    });
-  }, [teachers, query]);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pageStart = Math.max(1, Math.min(page - 2, totalPages - 4));
+  const pageEnd = Math.min(totalPages, pageStart + 4);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const openEdit = (teacher: AdminTeacher) => {
     setEditing(teacher);
@@ -312,7 +331,7 @@ export function AdminTeachers() {
             <p className="text-xs uppercase tracking-[0.2em] text-primary font-bold">
               Total profesores
             </p>
-            <p className="text-2xl font-bold text-[#1b0d0d]">{teachers.length}</p>
+            <p className="text-2xl font-bold text-[#1b0d0d]">{total}</p>
           </div>
           <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
             <span className="material-symbols-outlined">badge</span>
@@ -342,14 +361,14 @@ export function AdminTeachers() {
             {error}
           </div>
         )}
-        {!loading && !error && filtered.length === 0 && (
+        {!loading && !error && teachers.length === 0 && (
           <div className="bg-white p-4 rounded-xl text-sm text-gray-500 border border-gray-100">
             No hay profesores para mostrar.
           </div>
         )}
 
         <div className="flex flex-col gap-3">
-          {filtered.map((teacher) => (
+          {teachers.map((teacher) => (
             <div
               key={teacher.id}
               className="flex items-center gap-4 bg-white p-3 rounded-xl justify-between shadow-sm"
@@ -393,6 +412,46 @@ export function AdminTeachers() {
             </div>
           ))}
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <button
+              className="h-9 px-3 rounded-full border border-gray-200 text-xs font-semibold text-[#1b0d0d] disabled:opacity-40"
+              type="button"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={page === 1}
+            >
+              Anterior
+            </button>
+            <div className="flex items-center gap-1">
+              {Array.from(
+                { length: pageEnd - pageStart + 1 },
+                (_, index) => pageStart + index,
+              ).map((number) => (
+                <button
+                  key={number}
+                  className={`h-9 w-9 rounded-full text-xs font-semibold ${
+                    page === number
+                      ? 'bg-primary text-white'
+                      : 'border border-gray-200 text-[#1b0d0d]'
+                  }`}
+                  type="button"
+                  onClick={() => setPage(number)}
+                >
+                  {number}
+                </button>
+              ))}
+            </div>
+            <button
+              className="h-9 px-3 rounded-full border border-gray-200 text-xs font-semibold text-[#1b0d0d] disabled:opacity-40"
+              type="button"
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              disabled={page === totalPages}
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
       </main>
 
       {editing && (
