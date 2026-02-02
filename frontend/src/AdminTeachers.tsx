@@ -13,6 +13,7 @@ type AdminTeacher = {
   gyms?: string[] | null;
   user?: {
     id: string;
+    dni?: string;
     status: string;
   };
 };
@@ -100,7 +101,8 @@ export function AdminTeachers() {
     const value = query.toLowerCase();
     return teachers.filter((teacher) => {
       const name = `${teacher.firstName} ${teacher.lastName}`.toLowerCase();
-      return name.includes(value);
+      const dni = teacher.user?.dni ?? '';
+      return name.includes(value) || dni.includes(value);
     });
   }, [teachers, query]);
 
@@ -305,6 +307,17 @@ export function AdminTeachers() {
       </header>
 
       <main className="w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto p-4 pb-24 space-y-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-primary font-bold">
+              Total profesores
+            </p>
+            <p className="text-2xl font-bold text-[#1b0d0d]">{teachers.length}</p>
+          </div>
+          <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+            <span className="material-symbols-outlined">badge</span>
+          </div>
+        </div>
         <label className="flex flex-col min-w-40 h-12 w-full">
           <div className="flex w-full flex-1 items-stretch rounded-xl h-full shadow-sm">
             <div className="text-[#9a4c4c] flex border-none bg-white items-center justify-center pl-4 rounded-l-xl border-r-0">
@@ -312,7 +325,7 @@ export function AdminTeachers() {
             </div>
             <input
               className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-xl text-[#1b0d0d] focus:outline-0 focus:ring-0 border-none bg-white focus:border-none h-full placeholder:text-[#9a4c4c] px-4 pl-2 text-base font-normal leading-normal"
-              placeholder="Buscar por nombre"
+              placeholder="Buscar por nombre o DNI"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -349,6 +362,11 @@ export function AdminTeachers() {
                   <p className="text-[#1b0d0d] text-base font-semibold leading-tight">
                     {teacher.firstName} {teacher.lastName}
                   </p>
+                  {teacher.user?.dni && (
+                    <p className="text-[#9a4c4c] text-xs font-medium mt-1">
+                      DNI: {teacher.user.dni}
+                    </p>
+                  )}
                   {teacher.email && (
                     <p className="text-[11px] text-gray-500 mt-1">
                       {teacher.email}

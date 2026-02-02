@@ -199,7 +199,7 @@ export class AdminService {
     return this.prisma.teacher.findMany({
       include: {
         user: {
-          select: { id: true, status: true, createdAt: true },
+          select: { id: true, dni: true, status: true, createdAt: true },
         },
       },
       orderBy: { createdAt: 'desc' },

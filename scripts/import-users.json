@@ -1,0 +1,484 @@
+{
+  "students": [
+    {
+      "dni": "55926268",
+      "firstName": "Emma",
+      "lastName": "Carnicel",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "57370540",
+      "firstName": "Tadeo",
+      "lastName": "Sinastra",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "49400559",
+      "firstName": "Mario",
+      "lastName": "Baños",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "51189443",
+      "firstName": "Leonardo",
+      "lastName": "Baños",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "55545110",
+      "firstName": "Federico",
+      "lastName": "Funes",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "55380219",
+      "firstName": "Lorenzo",
+      "lastName": "Funes",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "55380220",
+      "firstName": "Lisandro",
+      "lastName": "Funes",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "53942626",
+      "firstName": "Facundo",
+      "lastName": "Perez",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "54923846",
+      "firstName": "Lautaro",
+      "lastName": "Prado",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "56086377",
+      "firstName": "Valentin",
+      "lastName": "Chavez",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "45529902",
+      "firstName": "Fernando",
+      "lastName": "Palacios",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "46172388",
+      "firstName": "Samuel",
+      "lastName": "Serrano",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "44986637",
+      "firstName": "Mercedes",
+      "lastName": "Murri",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "52940656",
+      "firstName": "Angelina",
+      "lastName": "Bazan",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "51187268",
+      "firstName": "Rocio",
+      "lastName": "Barrionuevo",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "39603413",
+      "firstName": "Gabriel",
+      "lastName": "Medina",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "48725704",
+      "firstName": "Selena",
+      "lastName": "Zarate",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "53313626",
+      "firstName": "Brandon",
+      "lastName": "Subelza",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "50812930",
+      "firstName": "Carla",
+      "lastName": "Innocente",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "13513965",
+      "firstName": "Daniel",
+      "lastName": "Villegas",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "45024344",
+      "firstName": "Gabriel",
+      "lastName": "Cabeda",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "46549409",
+      "firstName": "Brisa",
+      "lastName": "Cabeda",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "23712041",
+      "firstName": "Andrea",
+      "lastName": "Bustamante",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    },
+    {
+      "dni": "53662411",
+      "firstName": "Benjamin",
+      "lastName": "Gimenez",
+      "email": null,
+      "phone": null,
+      "guardianPhone": null,
+      "gym": null,
+      "address": null,
+      "birthDate": null
+    }
+  ],
+  "teachers": [
+    {
+      "dni": "42421850",
+      "firstName": "Lautaro",
+      "lastName": "Rocamora",
+      "email": "Lautarorocamorachs123@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "23832541",
+      "firstName": "Daniel",
+      "lastName": "Dierna",
+      "email": "nan",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "44009872",
+      "firstName": "Laura",
+      "lastName": "Castellanos",
+      "email": "mlauracastel@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "44139436",
+      "firstName": "Ignacio",
+      "lastName": "Cornejo",
+      "email": "ignacio.cornejo.01.f@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "45718997",
+      "firstName": "Pedro",
+      "lastName": "Rocamora",
+      "email": "pedrito1rocamora@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "48471671",
+      "firstName": "Emiliano",
+      "lastName": "Gomez",
+      "email": "emilianomartingomez277@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "43831454",
+      "firstName": "Federico",
+      "lastName": "Mamaní",
+      "email": "nan",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "46618241",
+      "firstName": "Nicolas",
+      "lastName": "Epifani",
+      "email": "nepifanis@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "48052184",
+      "firstName": "Lucia",
+      "lastName": "Genaulas",
+      "email": "lulagenaulas14@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "45256482",
+      "firstName": "Javier",
+      "lastName": "Barrozo",
+      "email": "leojavibarrozo@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "47611267",
+      "firstName": "Benjamin",
+      "lastName": "Luzuriaga",
+      "email": "luzuriagabenjamin@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "48076512",
+      "firstName": "Pablo",
+      "lastName": "Muñoz",
+      "email": "pabmanmu@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "45717540",
+      "firstName": "Sara",
+      "lastName": "Serrano",
+      "email": "saraserrano298@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "45724004",
+      "firstName": "Agustina",
+      "lastName": "Obredor",
+      "email": "agustinaobredor9@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "36513578",
+      "firstName": "Leonardo",
+      "lastName": "Obredor",
+      "email": "leonardoobredor91@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "48607535",
+      "firstName": "Alma",
+      "lastName": "Vargas",
+      "email": "almavalenvargas0901@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "24442147",
+      "firstName": "Patricia",
+      "lastName": "Ramos",
+      "email": "patri024ramos@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "27496726",
+      "firstName": "Carina",
+      "lastName": "Lucero",
+      "email": "nan",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "48077697",
+      "firstName": "Leonel",
+      "lastName": "Sosa",
+      "email": "nan",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "25034785",
+      "firstName": "Javier",
+      "lastName": "Rocamora",
+      "email": "Serviciosriodorado@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    },
+    {
+      "dni": "23184735",
+      "firstName": "Carina",
+      "lastName": "Ag?ero",
+      "email": "Carinaaguerochs@gmail.com",
+      "phone": null,
+      "birthDate": null,
+      "address": null,
+      "gyms": []
+    }
+  ],
+  "missing_teachers": [
+    "Morena Arrascaeta",
+    "Silvina Calle"
+  ]
+}
