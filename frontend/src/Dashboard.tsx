@@ -26,10 +26,11 @@ export function Dashboard() {
   const role = profile?.role ?? 'STUDENT';
   const [feeMessage, setFeeMessage] = useState('');
   const [feeLoading, setFeeLoading] = useState(false);
-  const [feeAmount, setFeeAmount] = useState('7500');
+  const [feeAmount, setFeeAmount] = useState('');
   const [feeCurrency, setFeeCurrency] = useState('ARS');
   const [mpMessage, setMpMessage] = useState('');
   const [mpConnected, setMpConnected] = useState(false);
+  const [adminCounts, setAdminCounts] = useState({ students: 0, teachers: 0 });
 
   const title = useMemo(() => {
     if (role === 'TEACHER') return 'Panel del Profesor';
@@ -101,10 +102,58 @@ export function Dashboard() {
   }, [profile]);
 
   useEffect(() => {
+    if (role !== 'ADMIN') return;
+    const loadCounts = async () => {
+      try {
+        const [studentsResponse, teachersResponse] = await Promise.all([
+          apiFetch('/admin/students', { method: 'GET', cache: 'no-store' }),
+          apiFetch('/admin/teachers', { method: 'GET', cache: 'no-store' }),
+        ]);
+        if (studentsResponse.ok) {
+          const data = await studentsResponse.json();
+          const list = Array.isArray(data) ? data : data?.data ?? [];
+          setAdminCounts((current) => ({ ...current, students: list.length }));
+        }
+        if (teachersResponse.ok) {
+          const data = await teachersResponse.json();
+          const list = Array.isArray(data) ? data : data?.data ?? [];
+          setAdminCounts((current) => ({ ...current, teachers: list.length }));
+        }
+      } catch {
+        setAdminCounts({ students: 0, teachers: 0 });
+      }
+    };
+    loadCounts();
+  }, [role]);
+
+  useEffect(() => {
     if (searchParams.get('mp') === 'connected') {
       setMpMessage('Mercado Pago conectado.');
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (role !== 'ADMIN') return;
+    const loadGlobalFee = async () => {
+      try {
+        const response = await apiFetch('/fees/settings', {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data?.monthlyAmount != null) {
+          setFeeAmount(String(data.monthlyAmount));
+        }
+        if (data?.currency) {
+          setFeeCurrency(String(data.currency));
+        }
+      } catch {
+        // ignore
+      }
+    };
+    loadGlobalFee();
+  }, [role]);
 
   const handleGenerateFees = async () => {
     setFeeMessage('');
@@ -369,6 +418,25 @@ export function Dashboard() {
 
         {role === 'ADMIN' && (
           <section className="space-y-4">
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+              <p className="text-xs uppercase tracking-[0.2em] text-primary font-bold">
+                Totales
+              </p>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-gray-100 bg-background-light p-4 flex flex-col gap-1">
+                  <span className="text-xs text-gray-500">Alumnos</span>
+                  <span className="text-2xl font-bold text-[#1b0d0d]">
+                    {adminCounts.students}
+                  </span>
+                </div>
+                <div className="rounded-xl border border-gray-100 bg-background-light p-4 flex flex-col gap-1">
+                  <span className="text-xs text-gray-500">Profesores</span>
+                  <span className="text-2xl font-bold text-[#1b0d0d]">
+                    {adminCounts.teachers}
+                  </span>
+                </div>
+              </div>
+            </div>
             <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
               <p className="text-sm font-bold">Acceso rápido</p>
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">

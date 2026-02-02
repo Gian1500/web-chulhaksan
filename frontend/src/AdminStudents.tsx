@@ -392,6 +392,17 @@ export function AdminStudents() {
       </header>
 
       <main className="w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto p-4 pb-24 space-y-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-primary font-bold">
+              Total alumnos
+            </p>
+            <p className="text-2xl font-bold text-[#1b0d0d]">{students.length}</p>
+          </div>
+          <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+            <span className="material-symbols-outlined">group</span>
+          </div>
+        </div>
         <label className="flex flex-col min-w-40 h-12 w-full">
           <div className="flex w-full flex-1 items-stretch rounded-xl h-full shadow-sm">
             <div className="text-[#9a4c4c] flex border-none bg-white items-center justify-center pl-4 rounded-l-xl border-r-0">

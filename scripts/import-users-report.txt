@@ -1,0 +1,8 @@
+Students: 24
+Teachers: 21
+Missing teachers (need DNI): Morena Arrascaeta, Silvina Calle
+
+Notes:
+- Password for each user is their DNI (bcryptjs, cost 10).
+- Students created ACTIVE, without assignment.
+- Emails/phones left NULL when empty.
