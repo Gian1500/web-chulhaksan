@@ -106,18 +106,28 @@ export function Dashboard() {
     const loadCounts = async () => {
       try {
         const [studentsResponse, teachersResponse] = await Promise.all([
-          apiFetch('/admin/students', { method: 'GET', cache: 'no-store' }),
-          apiFetch('/admin/teachers', { method: 'GET', cache: 'no-store' }),
+          apiFetch('/admin/students?page=1&limit=1', {
+            method: 'GET',
+            cache: 'no-store',
+          }),
+          apiFetch('/admin/teachers?page=1&limit=1', {
+            method: 'GET',
+            cache: 'no-store',
+          }),
         ]);
         if (studentsResponse.ok) {
           const data = await studentsResponse.json();
-          const list = Array.isArray(data) ? data : data?.data ?? [];
-          setAdminCounts((current) => ({ ...current, students: list.length }));
+          const total = Array.isArray(data)
+            ? data.length
+            : data?.total ?? data?.data?.length ?? 0;
+          setAdminCounts((current) => ({ ...current, students: total }));
         }
         if (teachersResponse.ok) {
           const data = await teachersResponse.json();
-          const list = Array.isArray(data) ? data : data?.data ?? [];
-          setAdminCounts((current) => ({ ...current, teachers: list.length }));
+          const total = Array.isArray(data)
+            ? data.length
+            : data?.total ?? data?.data?.length ?? 0;
+          setAdminCounts((current) => ({ ...current, teachers: total }));
         }
       } catch {
         setAdminCounts({ students: 0, teachers: 0 });

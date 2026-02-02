@@ -96,8 +96,16 @@ export function StudentProfile() {
           setTeacherProfile(data);
 
           if (studentsResponse.ok) {
-            const students = (await studentsResponse.json()) as unknown[];
-            setTeacherStudentCount(Array.isArray(students) ? students.length : 0);
+            const payload = (await studentsResponse.json()) as
+              | unknown[]
+              | { data?: unknown[]; total?: number; page?: number; limit?: number };
+            if (Array.isArray(payload)) {
+              setTeacherStudentCount(payload.length);
+            } else {
+              setTeacherStudentCount(
+                payload?.total ?? payload?.data?.length ?? 0,
+              );
+            }
           } else {
             setTeacherStudentCount(null);
           }

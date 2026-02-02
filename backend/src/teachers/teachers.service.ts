@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { UserRole, UserStatus } from '@prisma/client';
+import { Prisma, UserRole, UserStatus } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -56,7 +56,10 @@ export class TeachersService {
     });
   }
 
-  async getMyStudents(userId: string) {
+  async getMyStudents(
+    userId: string,
+    params?: { page?: number; limit?: number; search?: string },
+  ) {
     const teacher = await this.prisma.teacher.findUnique({
       where: { userId },
       select: { id: true },
@@ -66,37 +69,78 @@ export class TeachersService {
       throw new NotFoundException('Profesor no encontrado.');
     }
 
-    const assignments = await this.prisma.studentTeacherAssignment.findMany({
-      where: {
-        teacherId: teacher.id,
-        active: true,
-      },
-      include: {
-        student: true,
-      },
-      orderBy: {
-        startAt: 'desc',
-      },
-    });
+    const page = Math.max(1, params?.page ?? 1);
+    const limit = Math.max(1, params?.limit ?? 10);
+    const skip = (page - 1) * limit;
+    const search = params?.search?.trim();
 
-    return assignments.map((assignment) => assignment.student);
+    const where: Prisma.StudentTeacherAssignmentWhereInput = {
+      teacherId: teacher.id,
+      active: true,
+      student: search
+        ? {
+            OR: [
+              { dni: { contains: search } },
+              { firstName: { contains: search, mode: Prisma.QueryMode.insensitive } },
+              { lastName: { contains: search, mode: Prisma.QueryMode.insensitive } },
+            ],
+          }
+        : undefined,
+    };
+
+    const [total, assignments] = await this.prisma.$transaction([
+      this.prisma.studentTeacherAssignment.count({ where }),
+      this.prisma.studentTeacherAssignment.findMany({
+        where,
+        include: { student: true },
+        orderBy: { startAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const data = assignments.map((assignment) => assignment.student);
+    return { data, total, page, limit };
   }
 
-  async listAvailableStudents() {
-    return this.prisma.student.findMany({
-      where: {
-        assignments: {
-          none: { active: true },
+  async listAvailableStudents(params?: { page?: number; limit?: number; search?: string }) {
+    const page = Math.max(1, params?.page ?? 1);
+    const limit = Math.max(1, params?.limit ?? 10);
+    const skip = (page - 1) * limit;
+    const search = params?.search?.trim();
+
+    const where: Prisma.StudentWhereInput = {
+      assignments: {
+        none: { active: true },
+      },
+      ...(search
+        ? {
+            OR: [
+              { dni: { contains: search } },
+              { firstName: { contains: search, mode: Prisma.QueryMode.insensitive } },
+              { lastName: { contains: search, mode: Prisma.QueryMode.insensitive } },
+            ],
+          }
+        : {}),
+    };
+
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.student.count({ where }),
+      this.prisma.student.findMany({
+        where,
+        select: {
+          dni: true,
+          firstName: true,
+          lastName: true,
+          gym: true,
         },
-      },
-      select: {
-        dni: true,
-        firstName: true,
-        lastName: true,
-        gym: true,
-      },
-      orderBy: { lastName: 'asc' },
-    });
+        orderBy: { lastName: 'asc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    return { data, total, page, limit };
   }
 
   async assignStudent(userId: string, studentDni: string) {

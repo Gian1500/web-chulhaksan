@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { TeachersService } from './teachers.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { CreateStudentDto } from './dto/create-student.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
 
 @Controller('teachers')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -19,14 +20,14 @@ export class TeachersController {
 
   @Get('me/students')
   @Roles(UserRole.TEACHER)
-  getMyStudents(@Req() req: Request) {
-    return this.teachersService.getMyStudents(req['user'].sub);
+  getMyStudents(@Req() req: Request, @Query() query: PaginationDto) {
+    return this.teachersService.getMyStudents(req['user'].sub, query);
   }
 
   @Get('me/available-students')
   @Roles(UserRole.TEACHER)
-  listAvailableStudents() {
-    return this.teachersService.listAvailableStudents();
+  listAvailableStudents(@Query() query: PaginationDto) {
+    return this.teachersService.listAvailableStudents(query);
   }
 
   @Post('me/students')
