@@ -174,8 +174,8 @@ export function AdminStudents() {
   };
 
   const buildPayload = () => ({
-    firstName: form.firstName.trim(),
-    lastName: form.lastName.trim(),
+    firstName: form.firstName.trim() || null,
+    lastName: form.lastName.trim() || null,
     email: form.email.trim() || null,
     phone: form.phone.trim() || null,
     guardianPhone: form.guardianPhone.trim() || null,
@@ -247,13 +247,13 @@ export function AdminStudents() {
             role: 'STUDENT',
             dni: createForm.dni.trim(),
             password: createForm.password.trim(),
-            firstName: createForm.firstName.trim(),
-            lastName: createForm.lastName.trim(),
+            firstName: createForm.firstName.trim() || null,
+            lastName: createForm.lastName.trim() || null,
             email: createForm.email.trim() || null,
-            phone: createForm.phone.trim(),
-            guardianPhone: createForm.guardianPhone.trim(),
-            gym: createForm.gym.trim(),
-            birthDate: createForm.birthDate.trim(),
+            phone: createForm.phone.trim() || null,
+            guardianPhone: createForm.guardianPhone.trim() || null,
+            gym: createForm.gym.trim() || null,
+            birthDate: createForm.birthDate.trim() || null,
             address: createForm.address.trim() || null,
           }),
       });
@@ -500,7 +500,6 @@ export function AdminStudents() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, firstName: event.target.value }))
                   }
-                  required
                 />
                 <input
                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -509,7 +508,6 @@ export function AdminStudents() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, lastName: event.target.value }))
                   }
-                  required
                 />
               </div>
               <input
@@ -528,7 +526,6 @@ export function AdminStudents() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, phone: event.target.value }))
                   }
-                  required
                 />
                 <input
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -537,7 +534,6 @@ export function AdminStudents() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, guardianPhone: event.target.value }))
                   }
-                  required
                 />
                 <input
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -546,7 +542,6 @@ export function AdminStudents() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, gym: event.target.value }))
                   }
-                  required
                 />
               <div className="relative">
                 <input
@@ -557,7 +552,6 @@ export function AdminStudents() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, birthDate: event.target.value }))
                   }
-                  required
                 />
                 <div className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] text-gray-500 opacity-0 shadow-sm transition-opacity peer-focus:opacity-100">
                   Seleccioná la fecha de nacimiento
@@ -659,7 +653,6 @@ export function AdminStudents() {
                       firstName: event.target.value,
                     }))
                   }
-                  required
                 />
                 <input
                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -671,7 +664,6 @@ export function AdminStudents() {
                       lastName: event.target.value,
                     }))
                   }
-                  required
                 />
               </div>
               <input
@@ -703,7 +695,6 @@ export function AdminStudents() {
                 onChange={(event) =>
                   setCreateForm((prev) => ({ ...prev, phone: event.target.value }))
                 }
-                required
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -715,7 +706,6 @@ export function AdminStudents() {
                     guardianPhone: event.target.value,
                   }))
                 }
-                required
               />
               <input
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -724,7 +714,6 @@ export function AdminStudents() {
                 onChange={(event) =>
                   setCreateForm((prev) => ({ ...prev, gym: event.target.value }))
                 }
-                required
               />
               <div className="relative">
                 <input
@@ -738,7 +727,6 @@ export function AdminStudents() {
                       birthDate: event.target.value,
                     }))
                   }
-                  required
                 />
                 <div className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] text-gray-500 opacity-0 shadow-sm transition-opacity peer-focus:opacity-100">
                   Seleccioná la fecha de nacimiento
