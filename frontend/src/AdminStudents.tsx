@@ -133,7 +133,7 @@ export function AdminStudents() {
 
   const loadTeachers = async () => {
     try {
-      const response = await apiFetch('/admin/teachers?page=1&limit=1000', {
+      const response = await apiFetch('/admin/teachers?page=1&limit=100', {
         method: 'GET',
         cache: 'no-store',
       });

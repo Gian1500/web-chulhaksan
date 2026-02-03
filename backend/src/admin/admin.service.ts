@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateAdminUserDto } from './dto/create-admin-user.dto';
 import { ListUsersDto } from './dto/list-users.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
-import { Prisma, UserRole, UserStatus } from '@prisma/client';
+import { FeeStatus, Prisma, UserRole, UserStatus } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { normalizeDni } from '../normalize';
@@ -141,6 +141,31 @@ export class AdminService {
             birthDate: birthDateValue ? new Date(birthDateValue) : undefined,
             address,
           },
+        });
+
+        const activeFee = await tx.globalFeeSetting.findFirst({
+          where: { isActive: true },
+          orderBy: { createdAt: 'desc' },
+        });
+        if (!activeFee) {
+          throw new BadRequestException('No hay cuota global activa.');
+        }
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        const year = now.getFullYear();
+        const dueDate = new Date(year, month - 1, 10);
+        await tx.monthlyFee.createMany({
+          data: [
+            {
+              studentDni: normalizedDni,
+              month,
+              year,
+              amount: activeFee.monthlyAmount,
+              status: FeeStatus.PENDING,
+              dueDate,
+            },
+          ],
+          skipDuplicates: true,
         });
       }
 

@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, UserRole, UserStatus } from '@prisma/client';
+import { FeeStatus, Prisma, UserRole, UserStatus } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -88,7 +88,7 @@ export class TeachersService {
         : undefined,
     };
 
-    const [total, assignments] = await this.prisma.$transaction([
+    const [total, assignments] = (await this.prisma.$transaction([
       this.prisma.studentTeacherAssignment.count({ where }),
       this.prisma.studentTeacherAssignment.findMany({
         where,
@@ -97,7 +97,10 @@ export class TeachersService {
         skip,
         take: limit,
       }),
-    ]);
+    ])) as [
+      number,
+      Prisma.StudentTeacherAssignmentGetPayload<{ include: { student: true } }>[],
+    ];
 
     const data = assignments.map((assignment) => assignment.student);
     return { data, total, page, limit };
@@ -271,6 +274,31 @@ export class TeachersService {
           birthDate: birthDateValue ? new Date(birthDateValue) : undefined,
           address,
         },
+      });
+
+      const activeFee = await tx.globalFeeSetting.findFirst({
+        where: { isActive: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!activeFee) {
+        throw new BadRequestException('No hay cuota global activa.');
+      }
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+      const dueDate = new Date(year, month - 1, 10);
+      await tx.monthlyFee.createMany({
+        data: [
+          {
+            studentDni: normalizedDni,
+            month,
+            year,
+            amount: activeFee.monthlyAmount,
+            status: FeeStatus.PENDING,
+            dueDate,
+          },
+        ],
+        skipDuplicates: true,
       });
 
       return tx.studentTeacherAssignment.create({
