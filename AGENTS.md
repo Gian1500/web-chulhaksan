@@ -5,6 +5,7 @@
 - App domain: escuela/academia con roles `ADMIN`, `TEACHER`, `STUDENT`.
 - Core flows: auth con JWT, asignacion de alumnos a profesor, cuotas mensuales, pagos Mercado Pago y pagos en efectivo.
 - Deploy: Front en Vercel (`frontend/vercel.json` con rewrite SPA), back en Render.
+- Paginación: server-side en admin y profesor (page/limit/search), 5 ítems por página en UI.
 
 ## Quick commands
 - Frontend dev: `cd frontend; npm install; npm run dev`
@@ -22,6 +23,7 @@
 - Registro público: `ALLOW_PUBLIC_REGISTER=true` habilita `/auth/register` en producción (por defecto se bloquea).
 - JWT: `JWT_ACCESS_EXPIRES_IN` (default 15m), `JWT_REFRESH_SECRET`, `JWT_REFRESH_EXPIRES_IN` (default 7d).
 - DB: `DATABASE_URL` (PostgreSQL).
+- Admin bootstrap: no hay endpoint para crear ADMIN; se crea por SQL directo.
 
 ## Key business rules
 - DNI debe ser numerico sin puntos; normalizar a solo digitos en backend.
@@ -51,6 +53,7 @@
 - Pagos alumno: `frontend/src/Payments.tsx`, `frontend/src/PaymentQr.tsx`
 - Comprobante: `frontend/src/PaymentReceiptSuccess.tsx` (descarga vía `window.print()`).
 - Home: `frontend/src/Home.tsx`
+- Paginación UI: `frontend/src/AdminStudents.tsx`, `frontend/src/AdminTeachers.tsx`, `frontend/src/TeacherStudents.tsx`
 
 ## Backend touchpoints
 - Auth: `backend/src/auth/*`
@@ -61,6 +64,7 @@
 - Cuotas: `backend/src/fees/*`
 - Pagos: `backend/src/payments/*`
 - Prisma schema: `backend/prisma/schema.prisma`
+- Paginación API: `backend/src/admin/admin.service.ts`, `backend/src/teachers/teachers.service.ts`
 
 ## Agent guidelines (project-specific)
 - Mantener validaciones de DNI numerico en frontend y backend.
@@ -69,3 +73,5 @@
 - Si agregas campos a Prisma, actualizar DTOs, servicios y UI.
 - Respetar estilo UI actual (Tailwind, componentes mobile-first).
 - En pagos MP, `external_reference` es `payment.id` y `metadata.paymentId` se usa en webhook.
+- Scripts SQL de importación: `scripts/import-alumnos-profesor.sql`, `scripts/import-alumnos-que-son-profes.sql`, `scripts/import-profesores.sql`.
+- Documentación principal: `docs/PROJECT.md`.
