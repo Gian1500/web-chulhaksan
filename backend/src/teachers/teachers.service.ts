@@ -286,7 +286,8 @@ export class TeachersService {
       const now = new Date();
       const month = now.getMonth() + 1;
       const year = now.getFullYear();
-      const dueDate = new Date(year, month - 1, 10);
+      const dueDate =
+        now.getDate() > 10 ? new Date(year, month, 0) : new Date(year, month - 1, 10);
       await tx.monthlyFee.createMany({
         data: [
           {
