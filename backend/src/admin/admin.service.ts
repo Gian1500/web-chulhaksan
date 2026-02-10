@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAdminUserDto } from './dto/create-admin-user.dto';
 import { ListUsersDto } from './dto/list-users.dto';
@@ -9,10 +14,30 @@ import { randomBytes } from 'crypto';
 import { normalizeDni } from '../normalize';
 import { UpdateStudentDto } from '../students/dto/update-student.dto';
 import { UpdateTeacherDto } from '../teachers/dto/update-teacher.dto';
+import { CreateGymDto } from './dto/create-gym.dto';
+import { UpdateGymDto } from './dto/update-gym.dto';
+import { StudentCategory } from '@prisma/client';
 
 @Injectable()
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async listGyms() {
+    const gyms = await this.prisma.gym.findMany({
+      select: {
+        id: true,
+        name: true,
+        _count: { select: { students: true } },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return gyms.map((gym) => ({
+      id: gym.id,
+      name: gym.name,
+      studentsCount: gym._count.students,
+    }));
+  }
 
   async listUsers(filters?: ListUsersDto) {
     const where: any = {};
@@ -94,6 +119,14 @@ export class AdminService {
         );
       }
     }
+    if (dto.role === UserRole.STUDENT) {
+      if (!dto.gymId?.trim()) {
+        throw new BadRequestException('El gimnasio es obligatorio.');
+      }
+      if (!dto.category) {
+        throw new BadRequestException('Debes seleccionar si el alumno es Adulto o Infantil.');
+      }
+    }
 
     const normalizedDni = normalizeDni(dto.dni);
     const existing = await this.prisma.user.findUnique({
@@ -112,7 +145,8 @@ export class AdminService {
     const email = dto.email?.trim() || null;
     const phone = dto.phone?.trim() || null;
     const guardianPhone = dto.guardianPhone?.trim() || null;
-    const gym = dto.gym?.trim() || null;
+    const gymId = dto.gymId?.trim() || null;
+    const category = dto.category ?? StudentCategory.ADULT;
     const address = dto.address?.trim() || null;
     const birthDateValue = dto.birthDate?.trim();
 
@@ -128,16 +162,23 @@ export class AdminService {
       });
 
       if (dto.role === UserRole.STUDENT) {
+        const resolvedGym = gymId
+          ? await tx.gym.findUnique({ where: { id: gymId }, select: { id: true } })
+          : null;
+        if (!resolvedGym) {
+          throw new BadRequestException('El gimnasio es inválido.');
+        }
         await tx.student.create({
           data: {
             dni: normalizedDni,
             userId: user.id,
             firstName,
             lastName,
+            category,
             email,
             phone,
             guardianPhone,
-            gym,
+            gymId: resolvedGym.id,
             birthDate: birthDateValue ? new Date(birthDateValue) : undefined,
             address,
           },
@@ -231,21 +272,28 @@ export class AdminService {
     return { temporaryPassword };
   }
 
-  async listStudents(params?: { page?: number; limit?: number; search?: string }) {
+  async listStudents(params?: { page?: number; limit?: number; search?: string; gymId?: string; category?: StudentCategory }) {
     const page = Math.max(1, params?.page ?? 1);
     const limit = Math.max(1, params?.limit ?? 10);
     const skip = (page - 1) * limit;
     const search = params?.search?.trim();
 
-    const where: Prisma.StudentWhereInput | undefined = search
-      ? {
-          OR: [
-            { dni: { contains: search } },
-            { firstName: { contains: search, mode: Prisma.QueryMode.insensitive } },
-            { lastName: { contains: search, mode: Prisma.QueryMode.insensitive } },
-          ],
-        }
-      : undefined;
+    const where: Prisma.StudentWhereInput | undefined =
+      search || params?.gymId || params?.category
+        ? {
+            ...(params?.gymId ? { gymId: params.gymId } : {}),
+            ...(params?.category ? { category: params.category } : {}),
+            ...(search
+              ? {
+                  OR: [
+                    { dni: { contains: search } },
+                    { firstName: { contains: search, mode: Prisma.QueryMode.insensitive } },
+                    { lastName: { contains: search, mode: Prisma.QueryMode.insensitive } },
+                  ],
+                }
+              : {}),
+          }
+        : undefined;
 
     const [total, data] = await this.prisma.$transaction([
       this.prisma.student.count({ where }),
@@ -254,6 +302,9 @@ export class AdminService {
         include: {
           user: {
             select: { id: true, status: true, createdAt: true },
+          },
+          gym: {
+            select: { name: true },
           },
           assignments: {
             where: { active: true },
@@ -271,7 +322,13 @@ export class AdminService {
       }),
     ]);
 
-    return { data, total, page, limit };
+    // Normalize gym shape for the frontend (string name instead of nested relation object).
+    const normalized = data.map((student) => {
+      const { gym, ...rest } = student;
+      return { ...rest, gym: gym.name };
+    });
+
+    return { data: normalized, total, page, limit };
   }
 
   async listTeachers(params?: { page?: number; limit?: number; search?: string }) {
@@ -441,15 +498,26 @@ export class AdminService {
       throw new NotFoundException('Alumno no encontrado.');
     }
 
+    const nextGym = dto.gymId
+      ? await this.prisma.gym.findUnique({
+          where: { id: dto.gymId },
+          select: { id: true },
+        })
+      : null;
+    if (dto.gymId && !nextGym) {
+      throw new BadRequestException('El gimnasio es inválido.');
+    }
+
     return this.prisma.student.update({
       where: { dni: normalizedDni },
       data: {
         firstName: dto.firstName ?? undefined,
         lastName: dto.lastName ?? undefined,
+        category: dto.category ?? undefined,
         email: dto.email ?? undefined,
         phone: dto.phone ?? undefined,
         guardianPhone: dto.guardianPhone ?? undefined,
-        gym: dto.gym ?? undefined,
+        gymId: nextGym?.id ?? undefined,
         address: dto.address ?? undefined,
         birthDate: dto.birthDate
           ? new Date(dto.birthDate)
@@ -485,5 +553,53 @@ export class AdminService {
         gyms: dto.gyms === null ? [] : dto.gyms ?? undefined,
       },
     });
+  }
+
+  async createGym(dto: CreateGymDto) {
+    const name = dto.name.trim();
+    if (!name) {
+      throw new BadRequestException('El nombre del gimnasio es obligatorio.');
+    }
+
+    try {
+      return await this.prisma.gym.create({
+        data: { name },
+        select: { id: true, name: true },
+      });
+    } catch (err: any) {
+      // Unique constraint: Gym.name
+      if (err?.code === 'P2002') {
+        throw new ConflictException('Ya existe un gimnasio con ese nombre.');
+      }
+      throw err;
+    }
+  }
+
+  async renameGym(id: string, dto: UpdateGymDto) {
+    const name = dto.name.trim();
+    if (!name) {
+      throw new BadRequestException('El nombre del gimnasio es obligatorio.');
+    }
+
+    const gym = await this.prisma.gym.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!gym) {
+      throw new NotFoundException('Gimnasio no encontrado.');
+    }
+
+    try {
+      return await this.prisma.gym.update({
+        where: { id },
+        data: { name },
+        select: { id: true, name: true },
+      });
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        throw new ConflictException('Ya existe un gimnasio con ese nombre.');
+      }
+      throw err;
+    }
   }
 }

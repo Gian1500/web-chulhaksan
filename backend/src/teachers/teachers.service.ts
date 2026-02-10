@@ -1,10 +1,17 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { FeeStatus, Prisma, UserRole, UserStatus } from '@prisma/client';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { FeeStatus, Prisma, StudentCategory, UserRole, UserStatus } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { normalizeDni } from '../normalize';
 import { CreateStudentDto } from './dto/create-student.dto';
+import { UpdateStudentGymDto } from './dto/update-student-gym.dto';
+import { UpdateStudentCategoryDto } from './dto/update-student-category.dto';
 
 @Injectable()
 export class TeachersService {
@@ -34,6 +41,46 @@ export class TeachersService {
     return teacher;
   }
 
+  async listMyGyms(userId: string) {
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!teacher) {
+      throw new NotFoundException('Profesor no encontrado.');
+    }
+
+    const grouped = await this.prisma.student.groupBy({
+      by: ['gymId'],
+      where: {
+        assignments: {
+          some: { teacherId: teacher.id, active: true },
+        },
+      },
+      _count: { _all: true },
+    });
+
+    if (grouped.length === 0) {
+      return [];
+    }
+
+    const gymIds = grouped.map((row) => row.gymId);
+    const gyms = await this.prisma.gym.findMany({
+      where: { id: { in: gymIds } },
+      select: { id: true, name: true },
+    });
+
+    const nameById = new Map(gyms.map((g) => [g.id, g.name]));
+    return grouped
+      .map((row) => ({
+        id: row.gymId,
+        name: nameById.get(row.gymId) ?? 'Gimnasio',
+        studentsCount: row._count._all,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  }
+
   async disconnectMp(userId: string) {
     const teacher = await this.prisma.teacher.findUnique({
       where: { userId },
@@ -58,7 +105,7 @@ export class TeachersService {
 
   async getMyStudents(
     userId: string,
-    params?: { page?: number; limit?: number; search?: string },
+    params?: { page?: number; limit?: number; search?: string; gymId?: string; category?: StudentCategory },
   ) {
     const teacher = await this.prisma.teacher.findUnique({
       where: { userId },
@@ -84,29 +131,47 @@ export class TeachersService {
               { firstName: { contains: search, mode: Prisma.QueryMode.insensitive } },
               { lastName: { contains: search, mode: Prisma.QueryMode.insensitive } },
             ],
+            ...(params?.gymId ? { gymId: params.gymId } : {}),
+            ...(params?.category ? { category: params.category } : {}),
           }
-        : undefined,
+        : params?.gymId
+          ? { gymId: params.gymId, ...(params?.category ? { category: params.category } : {}) }
+          : params?.category
+            ? { category: params.category }
+            : undefined,
     };
 
     const [total, assignments] = (await this.prisma.$transaction([
       this.prisma.studentTeacherAssignment.count({ where }),
       this.prisma.studentTeacherAssignment.findMany({
         where,
-        include: { student: true },
+        include: {
+          student: {
+            include: {
+              gym: { select: { name: true } },
+            },
+          },
+        },
         orderBy: { startAt: 'desc' },
         skip,
         take: limit,
       }),
     ])) as [
       number,
-      Prisma.StudentTeacherAssignmentGetPayload<{ include: { student: true } }>[],
+      Prisma.StudentTeacherAssignmentGetPayload<{
+        include: { student: { include: { gym: { select: { name: true } } } } };
+      }>[],
     ];
 
-    const data = assignments.map((assignment) => assignment.student);
+    // Normalize gym shape for the frontend (string name instead of nested relation object).
+    const data = assignments.map((assignment) => {
+      const { gym, ...rest } = assignment.student;
+      return { ...rest, gym: gym.name };
+    });
     return { data, total, page, limit };
   }
 
-  async listAvailableStudents(params?: { page?: number; limit?: number; search?: string }) {
+  async listAvailableStudents(params?: { page?: number; limit?: number; search?: string; gymId?: string; category?: StudentCategory }) {
     const page = Math.max(1, params?.page ?? 1);
     const limit = Math.max(1, params?.limit ?? 10);
     const skip = (page - 1) * limit;
@@ -116,6 +181,8 @@ export class TeachersService {
       assignments: {
         none: { active: true },
       },
+      ...(params?.gymId ? { gymId: params.gymId } : {}),
+      ...(params?.category ? { category: params.category } : {}),
       ...(search
         ? {
             OR: [
@@ -135,7 +202,9 @@ export class TeachersService {
           dni: true,
           firstName: true,
           lastName: true,
-          gym: true,
+          category: true,
+          gymId: true,
+          gym: { select: { name: true } },
         },
         orderBy: { lastName: 'asc' },
         skip,
@@ -143,7 +212,13 @@ export class TeachersService {
       }),
     ]);
 
-    return { data, total, page, limit };
+    // Normalize gym shape for the frontend (string name instead of nested relation object).
+    const normalized = data.map((student) => ({
+      ...student,
+      gym: student.gym.name,
+    }));
+
+    return { data: normalized, total, page, limit };
   }
 
   async assignStudent(userId: string, studentDni: string) {
@@ -219,6 +294,83 @@ export class TeachersService {
     });
   }
 
+  async updateStudentGym(userId: string, studentDni: string, dto: UpdateStudentGymDto) {
+    const normalizedDni = normalizeDni(studentDni);
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!teacher) {
+      throw new NotFoundException('Profesor no encontrado.');
+    }
+
+    const assignment = await this.prisma.studentTeacherAssignment.findFirst({
+      where: {
+        studentDni: normalizedDni,
+        teacherId: teacher.id,
+        active: true,
+      },
+      select: { id: true },
+    });
+
+    if (!assignment) {
+      throw new ForbiddenException('No tienes permisos para este alumno.');
+    }
+
+    const gym = await this.prisma.gym.findUnique({
+      where: { id: dto.gymId },
+      select: { id: true, name: true },
+    });
+
+    if (!gym) {
+      throw new BadRequestException('El gimnasio es inválido.');
+    }
+
+    const student = await this.prisma.student.update({
+      where: { dni: normalizedDni },
+      data: { gymId: gym.id },
+      select: { dni: true, firstName: true, lastName: true, gymId: true },
+    });
+
+    return { ...student, gym: gym.name };
+  }
+
+  async updateStudentCategory(
+    userId: string,
+    studentDni: string,
+    dto: UpdateStudentCategoryDto,
+  ) {
+    const normalizedDni = normalizeDni(studentDni);
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!teacher) {
+      throw new NotFoundException('Profesor no encontrado.');
+    }
+
+    const assignment = await this.prisma.studentTeacherAssignment.findFirst({
+      where: {
+        studentDni: normalizedDni,
+        teacherId: teacher.id,
+        active: true,
+      },
+      select: { id: true },
+    });
+
+    if (!assignment) {
+      throw new ForbiddenException('No tienes permisos para este alumno.');
+    }
+
+    return this.prisma.student.update({
+      where: { dni: normalizedDni },
+      data: { category: dto.category },
+      select: { dni: true, category: true },
+    });
+  }
+
   async createStudent(userId: string, dto: CreateStudentDto) {
     const teacher = await this.prisma.teacher.findUnique({
       where: { userId },
@@ -246,11 +398,20 @@ export class TeachersService {
     const email = dto.email?.trim() || null;
     const phone = dto.phone?.trim() || null;
     const guardianPhone = dto.guardianPhone?.trim() || null;
-    const gym = dto.gym?.trim() || null;
+    const gymId = dto.gymId.trim();
+    const category = dto.category;
     const address = dto.address?.trim() || null;
     const birthDateValue = dto.birthDate?.trim();
 
     return this.prisma.$transaction(async (tx) => {
+      const resolvedGym = await tx.gym.findUnique({
+        where: { id: gymId },
+        select: { id: true },
+      });
+      if (!resolvedGym) {
+        throw new BadRequestException('El gimnasio es inválido.');
+      }
+
       const user = await tx.user.create({
         data: {
           dni: normalizedDni,
@@ -267,10 +428,11 @@ export class TeachersService {
           userId: user.id,
           firstName,
           lastName,
+          category,
           email,
           phone,
           guardianPhone,
-          gym,
+          gymId: resolvedGym.id,
           birthDate: birthDateValue ? new Date(birthDateValue) : undefined,
           address,
         },

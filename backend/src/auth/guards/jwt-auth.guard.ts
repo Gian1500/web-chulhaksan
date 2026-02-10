@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -40,8 +41,31 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const payload = await this.jwtService.verifyAsync(token);
       request.user = payload;
+
+      const isTestingMode =
+        (process.env.TESTING_MODE ?? '').toLowerCase() === 'true';
+      if (isTestingMode) {
+        const allowedRolesRaw =
+          process.env.TESTING_ALLOWED_ROLES ?? 'TEACHER,ADMIN';
+        const allowedRoles = new Set(
+          allowedRolesRaw
+            .split(',')
+            .map((role) => role.trim().toUpperCase())
+            .filter(Boolean),
+        );
+        const role = String(payload?.role ?? '').toUpperCase();
+        if (!allowedRoles.has(role)) {
+          throw new ForbiddenException(
+            'Sistema en modo prueba. Acceso restringido.',
+          );
+        }
+      }
+
       return true;
-    } catch {
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
       throw new UnauthorizedException('Token invalido.');
     }
   }

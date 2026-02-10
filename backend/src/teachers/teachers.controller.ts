@@ -6,6 +6,8 @@ import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { UpdateStudentGymDto } from './dto/update-student-gym.dto';
+import { UpdateStudentCategoryDto } from './dto/update-student-category.dto';
 
 @Controller('teachers')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -22,6 +24,12 @@ export class TeachersController {
   @Roles(UserRole.TEACHER)
   getMyStudents(@Req() req: Request, @Query() query: PaginationDto) {
     return this.teachersService.getMyStudents(req['user'].sub, query);
+  }
+
+  @Get('me/gyms')
+  @Roles(UserRole.TEACHER)
+  listMyGyms(@Req() req: Request) {
+    return this.teachersService.listMyGyms(req['user'].sub);
   }
 
   @Get('me/available-students')
@@ -46,6 +54,26 @@ export class TeachersController {
   @Roles(UserRole.TEACHER)
   unassignStudent(@Req() req: Request, @Param('dni') dni: string) {
     return this.teachersService.unassignStudent(req['user'].sub, dni);
+  }
+
+  @Patch('me/students/:dni/gym')
+  @Roles(UserRole.TEACHER)
+  updateStudentGym(
+    @Req() req: Request,
+    @Param('dni') dni: string,
+    @Body() dto: UpdateStudentGymDto,
+  ) {
+    return this.teachersService.updateStudentGym(req['user'].sub, dni, dto);
+  }
+
+  @Patch('me/students/:dni/category')
+  @Roles(UserRole.TEACHER)
+  updateStudentCategory(
+    @Req() req: Request,
+    @Param('dni') dni: string,
+    @Body() dto: UpdateStudentCategoryDto,
+  ) {
+    return this.teachersService.updateStudentCategory(req['user'].sub, dni, dto);
   }
 
   @Delete('me/students/:dni')

@@ -1,11 +1,14 @@
-import { IsBoolean, IsDateString, IsOptional, IsString, Length } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, Length, Matches } from 'class-validator';
 
 export class MarkAttendanceDto {
   @IsString()
   @Length(6, 12)
   studentDni: string;
 
-  @IsDateString()
+  @IsString()
+  @Matches(/^(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})$/, {
+    message: 'La fecha debe tener formato AAAA-MM-DD o DD/MM/AAAA.',
+  })
   date: string;
 
   @IsBoolean()

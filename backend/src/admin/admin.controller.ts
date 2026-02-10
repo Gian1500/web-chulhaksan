@@ -10,6 +10,8 @@ import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UpdateStudentDto } from '../students/dto/update-student.dto';
 import { UpdateTeacherDto } from '../teachers/dto/update-teacher.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { CreateGymDto } from './dto/create-gym.dto';
+import { UpdateGymDto } from './dto/update-gym.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -40,6 +42,11 @@ export class AdminController {
   @Get('students')
   listStudents(@Query() query: PaginationDto) {
     return this.adminService.listStudents(query);
+  }
+
+  @Get('gyms')
+  listGyms() {
+    return this.adminService.listGyms();
   }
 
   @Delete('students/:dni')
@@ -78,5 +85,15 @@ export class AdminController {
   @Patch('teachers/:id')
   updateTeacher(@Param('id') id: string, @Body() dto: UpdateTeacherDto) {
     return this.adminService.updateTeacher(id, dto);
+  }
+
+  @Post('gyms')
+  createGym(@Body() dto: CreateGymDto) {
+    return this.adminService.createGym(dto);
+  }
+
+  @Patch('gyms/:id')
+  renameGym(@Param('id') id: string, @Body() dto: UpdateGymDto) {
+    return this.adminService.renameGym(id, dto);
   }
 }

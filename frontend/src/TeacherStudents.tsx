@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch } from './auth';
 
 type StudentItem = {
   dni: string;
   firstName: string;
   lastName: string;
+  category?: 'ADULT' | 'CHILD';
+  gymId?: string;
   gym?: string | null;
 };
 
@@ -22,7 +24,8 @@ type CreateStudentForm = {
   email: string;
   phone: string;
   guardianPhone: string;
-  gym: string;
+  gymId: string;
+  category: 'ADULT' | 'CHILD';
   birthDate: string;
   address: string;
   password: string;
@@ -35,17 +38,32 @@ const emptyForm: CreateStudentForm = {
   email: '',
   phone: '',
   guardianPhone: '',
-  gym: '',
+  gymId: '',
+  category: 'ADULT',
   birthDate: '',
   address: '',
   password: '',
 };
 
+type GymOption = {
+  id: string;
+  name: string;
+};
+
+const categoryLabel = (value?: 'ADULT' | 'CHILD') =>
+  value === 'CHILD' ? 'Infantil' : 'Adulto';
+
 export function TeacherStudents() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [assigned, setAssigned] = useState<StudentWithStatus[]>([]);
   const [available, setAvailable] = useState<StudentItem[]>([]);
+  const [gyms, setGyms] = useState<GymOption[]>([]);
   const [activeTab, setActiveTab] = useState<TabKey>('assigned');
   const [query, setQuery] = useState('');
+  const [gymFilter, setGymFilter] = useState(searchParams.get('gymId') ?? '');
+  const [categoryFilter, setCategoryFilter] = useState(
+    (searchParams.get('category') as 'ADULT' | 'CHILD' | null) ?? '',
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -60,6 +78,17 @@ export function TeacherStudents() {
   const [totalAvailable, setTotalAvailable] = useState(0);
   const assignedCount = totalAssigned;
   const availableCount = totalAvailable;
+
+  const loadGyms = async () => {
+    try {
+      const response = await apiFetch('/gyms', { method: 'GET', cache: 'no-store' });
+      if (!response.ok) return;
+      const list = (await response.json()) as GymOption[];
+      setGyms(Array.isArray(list) ? list : []);
+    } catch {
+      // ignore
+    }
+  };
 
   const loadStudents = async () => {
     setLoading(true);
@@ -76,6 +105,14 @@ export function TeacherStudents() {
       if (query.trim()) {
         assignedParams.set('search', query.trim());
         availableParams.set('search', query.trim());
+      }
+      if (gymFilter) {
+        assignedParams.set('gymId', gymFilter);
+        availableParams.set('gymId', gymFilter);
+      }
+      if (categoryFilter) {
+        assignedParams.set('category', categoryFilter);
+        availableParams.set('category', categoryFilter);
       }
       const [assignedResponse, availableResponse] = await Promise.all([
         apiFetch(`/teachers/me/students?${assignedParams.toString()}`, {
@@ -162,7 +199,11 @@ export function TeacherStudents() {
 
   useEffect(() => {
     loadStudents();
-  }, [pageAssigned, pageAvailable, query]);
+  }, [pageAssigned, pageAvailable, query, gymFilter, categoryFilter]);
+
+  useEffect(() => {
+    loadGyms();
+  }, []);
 
   const sanitizeDni = (value: string) => value.replace(/\D/g, '');
 
@@ -192,6 +233,12 @@ export function TeacherStudents() {
     setError('');
     setCreateError('');
     try {
+      if (!form.gymId.trim()) {
+        throw new Error('Selecciona un gimnasio.');
+      }
+      if (!form.category) {
+        throw new Error('Selecciona si el alumno es Adulto o Infantil.');
+      }
       const response = await apiFetch('/teachers/me/students', {
         method: 'POST',
         json: true,
@@ -203,7 +250,8 @@ export function TeacherStudents() {
           email: form.email.trim() || null,
           phone: form.phone.trim() || null,
           guardianPhone: form.guardianPhone.trim() || null,
-          gym: form.gym.trim() || null,
+          gymId: form.gymId.trim(),
+          category: form.category,
           birthDate: form.birthDate.trim() || null,
           address: form.address.trim() || null,
         }),
@@ -243,7 +291,25 @@ export function TeacherStudents() {
   useEffect(() => {
     setPageAssigned(1);
     setPageAvailable(1);
-  }, [query, activeTab]);
+  }, [query, activeTab, gymFilter, categoryFilter]);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const desired: TabKey | null =
+      tab === 'available' ? 'available' : tab === 'assigned' ? 'assigned' : null;
+    if (desired && desired !== activeTab) {
+      setActiveTab(desired);
+    }
+    const gymId = searchParams.get('gymId') ?? '';
+    if (gymId !== gymFilter) {
+      setGymFilter(gymId);
+    }
+    const category = (searchParams.get('category') as 'ADULT' | 'CHILD' | null) ?? '';
+    if (category !== categoryFilter) {
+      setCategoryFilter(category);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     if (pageAssigned > totalPagesAssigned) {
@@ -297,6 +363,57 @@ export function TeacherStudents() {
             />
           </div>
         </label>
+        <div className="mt-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined">folder</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs uppercase tracking-[0.2em] text-primary font-bold">
+                Gimnasio
+              </p>
+              <select
+                className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                value={gymFilter}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  setGymFilter(next);
+                  const nextParams = new URLSearchParams(searchParams);
+                  if (next) nextParams.set('gymId', next);
+                  else nextParams.delete('gymId');
+                  setSearchParams(nextParams, { replace: true });
+                }}
+              >
+                <option value="">Todos los gimnasios</option>
+                {gyms.map((gym) => (
+                  <option key={gym.id} value={gym.id}>
+                    {gym.name}
+                  </option>
+                ))}
+              </select>
+
+              <p className="mt-4 text-xs uppercase tracking-[0.2em] text-primary font-bold">
+                Tipo
+              </p>
+              <select
+                className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                value={categoryFilter}
+                onChange={(event) => {
+                  const next = event.target.value as 'ADULT' | 'CHILD' | '';
+                  setCategoryFilter(next);
+                  const nextParams = new URLSearchParams(searchParams);
+                  if (next) nextParams.set('category', next);
+                  else nextParams.delete('category');
+                  setSearchParams(nextParams, { replace: true });
+                }}
+              >
+                <option value="">Todos</option>
+                <option value="ADULT">Adultos</option>
+                <option value="CHILD">Infantiles</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 px-4 py-2">
@@ -307,7 +424,12 @@ export function TeacherStudents() {
               : 'bg-white border border-gray-100 text-[#1b0d0d]'
           }`}
           type="button"
-          onClick={() => setActiveTab('assigned')}
+          onClick={() => {
+            setActiveTab('assigned');
+            const nextParams = new URLSearchParams(searchParams);
+            nextParams.set('tab', 'assigned');
+            setSearchParams(nextParams, { replace: true });
+          }}
         >
           <p className="text-sm font-semibold leading-normal">Asignados</p>
         </button>
@@ -318,7 +440,12 @@ export function TeacherStudents() {
               : 'bg-white border border-gray-100 text-[#1b0d0d]'
           }`}
           type="button"
-          onClick={() => setActiveTab('available')}
+          onClick={() => {
+            setActiveTab('available');
+            const nextParams = new URLSearchParams(searchParams);
+            nextParams.set('tab', 'available');
+            setSearchParams(nextParams, { replace: true });
+          }}
         >
           <p className="text-sm font-semibold leading-normal">Disponibles</p>
         </button>
@@ -373,6 +500,9 @@ export function TeacherStudents() {
                         Gimnasio: {student.gym}
                       </p>
                     )}
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Tipo: {categoryLabel(student.category)}
+                    </p>
                   </div>
                 </Link>
                 <div className="flex flex-col items-end gap-2">
@@ -417,6 +547,9 @@ export function TeacherStudents() {
                         Gimnasio: {student.gym}
                       </p>
                     )}
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Tipo: {categoryLabel(student.category)}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -582,14 +715,39 @@ export function TeacherStudents() {
                   setForm((prev) => ({ ...prev, email: event.target.value }))
                 }
               />
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Gimnasio"
-                value={form.gym}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, gym: event.target.value }))
-                }
-              />
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">Gimnasio</label>
+                <select
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                  value={form.gymId}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, gymId: event.target.value }))
+                  }
+                >
+                  <option value="">Selecciona un gimnasio</option>
+                  {gyms.map((gym) => (
+                    <option key={gym.id} value={gym.id}>
+                      {gym.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">Tipo</label>
+                <select
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                  value={form.category}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      category: event.target.value as 'ADULT' | 'CHILD',
+                    }))
+                  }
+                >
+                  <option value="ADULT">Adulto</option>
+                  <option value="CHILD">Infantil</option>
+                </select>
+              </div>
               <div className="relative">
                 <input
                   className="peer w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"

@@ -4,6 +4,7 @@
 - Repo layout: `backend/` (NestJS + Prisma + PostgreSQL), `frontend/` (React + Vite + TypeScript + Tailwind).
 - App domain: escuela/academia con roles `ADMIN`, `TEACHER`, `STUDENT`.
 - Core flows: auth con JWT, asignacion de alumnos a profesor, cuotas mensuales, pagos Mercado Pago y pagos en efectivo.
+- Extras: gimnasios + asistencias por gimnasio + etiquetas Adulto/Infantil + Formas (links) con desbloqueo manual.
 - Deploy: Front en Vercel (`frontend/vercel.json` con rewrite SPA), back en Render.
 - Paginación: server-side en admin y profesor (page/limit/search), 5 ítems por página en UI.
 
@@ -16,6 +17,8 @@
 ## Runtime/config notes
 - Backend carga `.env` desde `backend/.env` y/o raiz.
 - Auth usa cookies httpOnly (`access_token`, `refresh_token`) y frontend envía `credentials: 'include'`.
+- Modo testing (bloqueo por rol): `TESTING_MODE=true` y `TESTING_ALLOWED_ROLES=TEACHER,ADMIN`.
+- Prisma: `backend/package.json` tiene `postinstall: prisma generate` (importante para deploys).
 - MP OAuth: `MP_CLIENT_ID`, `MP_CLIENT_SECRET`, `MP_OAUTH_REDIRECT_URI`, `MP_OAUTH_STATE_SECRET`.
 - MP Webhook: `MP_WEBHOOK_URL` (se usa con `teacherId` en query), `MP_WEBHOOK_SECRET`, `MP_WEBHOOK_TOLERANCE_SEC`.
 - MP Back URLs: `MP_BACK_URL_SUCCESS`, `MP_BACK_URL_FAILURE`, `MP_BACK_URL_PENDING`.
@@ -29,8 +32,9 @@
 - DNI debe ser numerico sin puntos; normalizar a solo digitos en backend.
 - Alumnos solo ven nombre/apellido del profesor asignado.
 - Profesores pueden crear alumnos y quedan `ACTIVE` y asignados al profesor.
-- Cuotas se generan automaticamente el dia 1 y vencen el dia 10.
+- Cuotas se generan con `/fees/generate` (objetivo futuro: automatizar el dia 1) y vencen el dia 10.
 - Recargo fijo de 5000 desde el dia 11 (no acumulativo).
+- Alta de alumno (admin/profe): crea tambien la cuota del mes actual; si el alta es despues del dia 10, esa cuota usa `dueDate` fin de mes (sin recargo ese mes).
 - Profesores solo pueden ver/alinear alumnos no asignados; no pueden reasignar alumnos de otros profesores.
 - Profesores pueden marcar cuota como pagada en efectivo (genera `Payment` aprobado).
 - Asistencia/solicitudes estan ocultas en frontend (endpoints quedan para futuro).
@@ -39,11 +43,13 @@
 
 ## Data model hints (Prisma)
 - `User` con `role` y `status`.
-- `Student` incluye `guardianPhone` y `gym`.
+- `Gym` (carpetas/sedes).
+- `Student` incluye `guardianPhone` y `gymId` obligatorio (relación a `Gym`).
 - `Teacher` incluye tokens OAuth de Mercado Pago.
 - `StudentTeacherAssignment` define asignacion activa.
 - `MonthlyFee` y `Payment` manejan cuotas/pagos.
 - `Payment.rawResponse` guarda MP raw; pagos en efectivo usan `{ manual: true, method: 'cash' }`.
+- `Attendance` guarda 1 asistencia por alumno/dia y snapshot de `gymId` (presente/ausente + notas).
 
 ## Frontend touchpoints
 - Auth helpers: `frontend/src/auth.ts`
@@ -54,6 +60,9 @@
 - Comprobante: `frontend/src/PaymentReceiptSuccess.tsx` (descarga vía `window.print()`).
 - Home: `frontend/src/Home.tsx`
 - Paginación UI: `frontend/src/AdminStudents.tsx`, `frontend/src/AdminTeachers.tsx`, `frontend/src/TeacherStudents.tsx`
+- Formas: `frontend/src/FormsManager.tsx` (admin/teacher), `frontend/src/MyForms.tsx` (alumno), desbloqueo por alumno en `frontend/src/StudentDetail.tsx`
+- Asistencia por gimnasio (admin+teacher): `frontend/src/GymAttendance.tsx`
+- Asistencia alumno (read-only): `frontend/src/MyAttendance.tsx`
 
 ## Backend touchpoints
 - Auth: `backend/src/auth/*`
@@ -65,6 +74,14 @@
 - Pagos: `backend/src/payments/*`
 - Prisma schema: `backend/prisma/schema.prisma`
 - Paginación API: `backend/src/admin/admin.service.ts`, `backend/src/teachers/teachers.service.ts`
+- Formas API: `backend/src/forms/*` (`/forms`, `/forms/me`, `/forms/student/:dni`, `/forms/student/:dni/access`)
+- Gyms API: `GET /gyms`, `POST /admin/gyms`, `PATCH /admin/gyms/:id`, `PATCH /teachers/me/students/:dni/gym`
+- Attendance API: `backend/src/attendance/*`
+
+## Attendance API (nuevo)
+- `GET /attendance/gym/:gymId?date=YYYY-MM-DD` (ADMIN/TEACHER) lista alumnos del gimnasio + estado del dia
+- `PUT /attendance/gym/:gymId?date=YYYY-MM-DD` (ADMIN/TEACHER) guarda asistencia bulk (ausente explicito para no marcados)
+- `GET /attendance/me` (STUDENT) historial read-only (ultimos 120)
 
 ## Agent guidelines (project-specific)
 - Mantener validaciones de DNI numerico en frontend y backend.

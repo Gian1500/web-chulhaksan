@@ -1,0 +1,71 @@
+{
+  "rows": [
+    {
+      "dni": "486075359",
+      "firstName": "Alma",
+      "lastName": "Vargas",
+      "gym": "CARRODILLA LOS OLIVOS",
+      "teacherDni": "43831454"
+    },
+    {
+      "dni": "424218509",
+      "firstName": "Lautaro",
+      "lastName": "Rocamora",
+      "gym": "nan",
+      "teacherDni": null
+    },
+    {
+      "dni": "238325419",
+      "firstName": "Daniel",
+      "lastName": "Dierna",
+      "gym": "nan",
+      "teacherDni": null
+    },
+    {
+      "dni": "440098729",
+      "firstName": "Laura",
+      "lastName": "Castellanos",
+      "gym": "nan",
+      "teacherDni": null
+    },
+    {
+      "dni": "441394369",
+      "firstName": "Ignacio",
+      "lastName": "Cornejo",
+      "gym": "nan",
+      "teacherDni": null
+    },
+    {
+      "dni": "457189979",
+      "firstName": "Pedro",
+      "lastName": "Rocamora",
+      "gym": "nan",
+      "teacherDni": null
+    },
+    {
+      "dni": "484716719",
+      "firstName": "Emiliano",
+      "lastName": "Gomez",
+      "gym": "nan",
+      "teacherDni": null
+    },
+    {
+      "dni": "466182419",
+      "firstName": "Nicolas",
+      "lastName": "Epifani",
+      "gym": "nan",
+      "teacherDni": null
+    },
+    {
+      "dni": "480776979",
+      "firstName": "Leonel",
+      "lastName": "Sosa",
+      "gym": "nan",
+      "teacherDni": null
+    }
+  ],
+  "missingTeachers": [
+    "Daniel Dierna",
+    "Javier Rocamora"
+  ]
+}

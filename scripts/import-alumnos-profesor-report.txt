@@ -1,0 +1,8 @@
+Total filas CSV: 160
+Alumnos ?nicos por DNI: 160
+Asignaciones con profesor: 147
+
+Notas:
+- Contrase?a = DNI (bcryptjs, cost 10).
+- Email/tel?fonos vac?os quedan NULL.
+- Si el alumno ya tiene asignaci?n activa, no se crea una nueva.

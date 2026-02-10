@@ -1,0 +1,10 @@
+Total filas CSV: 9
+Alumnos ?nicos por DNI: 9
+Asignaciones con profesor (por nombre): 1
+Profesores sin match por nombre: Daniel Dierna, Javier Rocamora
+
+Notas:
+- DNI alumno = DNI original + "9".
+- Contrase?a = DNI alumno (con 9).
+- Email/tel?fonos vac?os quedan NULL.
+- Si el alumno ya tiene asignaci?n activa, no se crea una nueva.

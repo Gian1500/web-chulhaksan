@@ -371,6 +371,24 @@ export function Dashboard() {
                 </Link>
                 <Link
                   className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
+                  to="/asistencia"
+                >
+                  <span className="material-symbols-outlined text-primary">
+                    checklist
+                  </span>
+                  <span className="text-sm font-semibold">Asistencia</span>
+                  <span className="text-xs text-gray-500">Historial</span>
+                </Link>
+                <Link
+                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
+                  to="/formas"
+                >
+                  <span className="material-symbols-outlined text-primary">link</span>
+                  <span className="text-sm font-semibold">Formas</span>
+                  <span className="text-xs text-gray-500">Material</span>
+                </Link>
+                <Link
+                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
                   to="/perfil"
                 >
                   <span className="material-symbols-outlined text-primary">person</span>
@@ -394,6 +412,24 @@ export function Dashboard() {
                   <span className="material-symbols-outlined text-primary">group</span>
                   <span className="text-sm font-semibold">Alumnos</span>
                   <span className="text-xs text-gray-500">Listado y estado</span>
+                </Link>
+
+                <Link
+                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
+                  to="/profesor/gimnasios"
+                >
+                  <span className="material-symbols-outlined text-primary">folder</span>
+                  <span className="text-sm font-semibold">Gimnasios</span>
+                  <span className="text-xs text-gray-500">Carpetas y conteos</span>
+                </Link>
+
+                <Link
+                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
+                  to="/profesor/formas"
+                >
+                  <span className="material-symbols-outlined text-primary">link</span>
+                  <span className="text-sm font-semibold">Formas</span>
+                  <span className="text-xs text-gray-500">Links y desbloqueos</span>
                 </Link>
 
                 <Link
@@ -465,6 +501,22 @@ export function Dashboard() {
                   <span className="material-symbols-outlined text-primary">badge</span>
                   <span className="text-sm font-semibold">Profesores</span>
                   <span className="text-xs text-gray-500">Gestión total</span>
+                </Link>
+                <Link
+                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light h-full"
+                  to="/admin/formas"
+                >
+                  <span className="material-symbols-outlined text-primary">link</span>
+                  <span className="text-sm font-semibold">Formas</span>
+                  <span className="text-xs text-gray-500">Links y desbloqueos</span>
+                </Link>
+                <Link
+                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light h-full"
+                  to="/admin/gimnasios"
+                >
+                  <span className="material-symbols-outlined text-primary">folder</span>
+                  <span className="text-sm font-semibold">Gimnasios</span>
+                  <span className="text-xs text-gray-500">Carpetas y conteos</span>
                 </Link>
                 <div className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light h-full justify-between">
                   <div className="flex flex-col gap-2">

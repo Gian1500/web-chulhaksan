@@ -1,4 +1,5 @@
-import { IsDateString, IsEmail, IsOptional, IsString, Length } from 'class-validator';
+import { IsDateString, IsEmail, IsEnum, IsOptional, IsString, IsUUID, Length } from 'class-validator';
+import { StudentCategory } from '@prisma/client';
 
 export class UpdateStudentDto {
   @IsOptional()
@@ -26,9 +27,14 @@ export class UpdateStudentDto {
   guardianPhone?: string;
 
   @IsOptional()
-  @IsString()
-  @Length(2, 80)
-  gym?: string;
+  @IsUUID()
+  gymId?: string;
+
+  @IsOptional()
+  @IsEnum(StudentCategory, {
+    message: 'Selecciona si el alumno es Adulto o Infantil.',
+  })
+  category?: StudentCategory;
 
   @IsOptional()
   @IsDateString()
