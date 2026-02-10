@@ -19,6 +19,11 @@ enum UserStatus {
   BLOCKED
 }
 
+enum StudentCategory {
+  ADULT
+  CHILD
+}
+
 enum RequestStatus {
   PENDING_TEACHER
   PENDING_STUDENT
@@ -80,6 +85,7 @@ model Teacher {
   user        User                       @relation(fields: [userId], references: [id])
   assignments StudentTeacherAssignment[]
   requests    StudentTeacherRequest[]
+  unlockedForms StudentFormAccess[] @relation("UnlockedByTeacher")
 }
 
 model Student {
@@ -87,21 +93,34 @@ model Student {
   userId    String   @unique
   firstName String
   lastName  String
+  category  StudentCategory @default(ADULT)
   birthDate DateTime?
   phone     String?
   guardianPhone String?
   email     String?
-  gym       String?
+  gymId     String
   address   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user        User                       @relation(fields: [userId], references: [id])
+  gym         Gym                        @relation(fields: [gymId], references: [id])
   assignments StudentTeacherAssignment[]
   requests    StudentTeacherRequest[]
   fees        MonthlyFee[]
   attendance  Attendance[]
+  formAccess  StudentFormAccess[]
 }
+
+model Gym {
+    id        String   @id @default(uuid())
+    name      String   @unique
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+  
+    students  Student[]
+    attendances Attendance[]
+  }
 
 model StudentTeacherRequest {
   id              String            @id @default(uuid())
@@ -183,15 +202,49 @@ model Payment {
 }
 
 model Attendance {
-  id         String   @id @default(uuid())
-  studentDni String
-  date       DateTime
-  present    Boolean
-  notes      String?
-  createdAt  DateTime @default(now())
+    id         String   @id @default(uuid())
+    studentDni String
+    gymId      String
+    date       DateTime
+    present    Boolean
+    notes      String?
+    createdAt  DateTime @default(now())
+  
+    student Student @relation(fields: [studentDni], references: [dni])
+    gym     Gym     @relation(fields: [gymId], references: [id])
+  
+    @@unique([studentDni, date])
+    @@index([studentDni])
+    @@index([gymId])
+    @@index([gymId, date])
+  }
 
-  student Student @relation(fields: [studentDni], references: [dni])
+model FormLink {
+  id        String   @id @default(uuid())
+  title     String
+  url       String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@unique([studentDni, date])
+  access StudentFormAccess[]
+
+  @@index([order])
+}
+
+model StudentFormAccess {
+  id                 String   @id @default(uuid())
+  studentDni         String
+  formId             String
+  unlockedAt         DateTime @default(now())
+  unlockedByTeacherId String?
+
+  student     Student   @relation(fields: [studentDni], references: [dni])
+  form        FormLink  @relation(fields: [formId], references: [id])
+  unlockedBy  Teacher?  @relation("UnlockedByTeacher", fields: [unlockedByTeacherId], references: [id])
+
+  @@unique([studentDni, formId])
   @@index([studentDni])
+  @@index([formId])
+  @@index([unlockedByTeacherId])
 }

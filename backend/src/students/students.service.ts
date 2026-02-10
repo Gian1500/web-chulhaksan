@@ -11,13 +11,18 @@ export class StudentsService {
     const normalizedDni = normalizeDni(dni);
     const student = await this.prisma.student.findUnique({
       where: { dni: normalizedDni },
+      include: {
+        gym: { select: { name: true } },
+      },
     });
 
     if (!student) {
       throw new NotFoundException('Alumno no encontrado.');
     }
 
-    return student;
+    // Normalize gym shape for the frontend (string name instead of nested relation object).
+    const { gym, ...rest } = student;
+    return { ...rest, gym: gym.name };
   }
 
   async getByDniForTeacher(userId: string, dni: string) {
@@ -81,10 +86,26 @@ export class StudentsService {
       throw new NotFoundException('Alumno no encontrado.');
     }
 
+    const nextGym = dto.gymId
+      ? await this.prisma.gym.findUnique({
+          where: { id: dto.gymId },
+          select: { id: true },
+        })
+      : null;
+    if (dto.gymId && !nextGym) {
+      throw new ForbiddenException('El gimnasio es inválido.');
+    }
+
     return this.prisma.student.update({
       where: { dni: normalizedDni },
       data: {
-        ...dto,
+        firstName: dto.firstName ?? undefined,
+        lastName: dto.lastName ?? undefined,
+        email: dto.email ?? undefined,
+        phone: dto.phone ?? undefined,
+        guardianPhone: dto.guardianPhone ?? undefined,
+        gymId: nextGym?.id ?? undefined,
+        address: dto.address ?? undefined,
         birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
       },
     });

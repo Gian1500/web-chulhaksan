@@ -1,0 +1,5 @@
+Total filas: 23
+Insertables (con DNI): 21
+Saltadas (sin DNI): 2
+- Morena Arrascaeta
+- Silvina Calle

@@ -6,12 +6,21 @@ type StudentDetailData = {
   dni: string;
   firstName: string;
   lastName: string;
+  category?: 'ADULT' | 'CHILD';
   phone?: string | null;
   guardianPhone?: string | null;
   email?: string | null;
   birthDate?: string | null;
   address?: string | null;
   gym?: string | null;
+};
+
+type FormAccessItem = {
+  id: string;
+  title: string;
+  url: string;
+  order: number;
+  unlocked: boolean;
 };
 
 type FeeItem = {
@@ -45,6 +54,7 @@ export function StudentDetail() {
   const navigate = useNavigate();
   const profile = getProfile();
   const isTeacher = profile?.role === 'TEACHER';
+  const canManageForms = profile?.role === 'TEACHER' || profile?.role === 'ADMIN';
   const [student, setStudent] = useState<StudentDetailData | null>(null);
   const [fees, setFees] = useState<FeeItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +66,16 @@ export function StudentDetail() {
   const [resetInfo, setResetInfo] = useState('');
   const [resetting, setResetting] = useState(false);
   const [copiedReset, setCopiedReset] = useState(false);
+  const [categoryValue, setCategoryValue] = useState<'ADULT' | 'CHILD'>('ADULT');
+  const [updatingCategory, setUpdatingCategory] = useState(false);
+  const [formsAccess, setFormsAccess] = useState<FormAccessItem[]>([]);
+  const [formsLoading, setFormsLoading] = useState(false);
+  const [formsUpdatingId, setFormsUpdatingId] = useState<string | null>(null);
+
+  const categoryLabel = (value?: 'ADULT' | 'CHILD') => {
+    if (value === 'CHILD') return 'Infantil';
+    return 'Adulto';
+  };
 
   useEffect(() => {
     if (!dni) {
@@ -83,7 +103,25 @@ export function StudentDetail() {
         const studentData = (await studentResponse.json()) as StudentDetailData;
         const feesData = (await feesResponse.json()) as FeeItem[];
         setStudent(studentData);
+        setCategoryValue(studentData.category ?? 'ADULT');
         setFees(feesData ?? []);
+
+        if (canManageForms) {
+          setFormsLoading(true);
+          const formsResponse = await apiFetch(`/forms/student/${dni}`, {
+            method: 'GET',
+            cache: 'no-store',
+          });
+          if (formsResponse.ok) {
+            const list = (await formsResponse.json()) as FormAccessItem[];
+            setFormsAccess(Array.isArray(list) ? list : []);
+          } else {
+            setFormsAccess([]);
+          }
+          setFormsLoading(false);
+        } else {
+          setFormsAccess([]);
+        }
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'No se pudo cargar el alumno.';
@@ -94,7 +132,7 @@ export function StudentDetail() {
     };
 
     load();
-  }, [dni]);
+  }, [dni, canManageForms]);
 
   const fullName = useMemo(() => {
     if (!student) return 'Alumno';
@@ -235,6 +273,72 @@ export function StudentDetail() {
     }
   };
 
+  const handleUpdateCategory = async (nextCategory: 'ADULT' | 'CHILD') => {
+    if (!dni) return;
+    setUpdatingCategory(true);
+    setError('');
+    const previous = categoryValue;
+    setCategoryValue(nextCategory);
+
+    try {
+      const response = await apiFetch(`/teachers/me/students/${dni}/category`, {
+        method: 'PATCH',
+        json: true,
+        body: JSON.stringify({ category: nextCategory }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message ?? 'No se pudo actualizar el tipo.');
+      }
+
+      setStudent((current) => (current ? { ...current, category: nextCategory } : current));
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'No se pudo actualizar el tipo.';
+      setError(message);
+      setCategoryValue(previous);
+    } finally {
+      setUpdatingCategory(false);
+    }
+  };
+
+  const handleToggleForm = async (form: FormAccessItem) => {
+    if (!dni) return;
+    setFormsUpdatingId(form.id);
+    setError('');
+    const nextUnlocked = !form.unlocked;
+
+    setFormsAccess((current) =>
+      current.map((item) =>
+        item.id === form.id ? { ...item, unlocked: nextUnlocked } : item,
+      ),
+    );
+
+    try {
+      const res = await apiFetch(`/forms/student/${dni}/access`, {
+        method: 'PATCH',
+        json: true,
+        body: JSON.stringify({ formId: form.id, unlocked: nextUnlocked }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message ?? 'No se pudo actualizar el acceso.');
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'No se pudo actualizar el acceso.';
+      setError(message);
+      setFormsAccess((current) =>
+        current.map((item) =>
+          item.id === form.id ? { ...item, unlocked: form.unlocked } : item,
+        ),
+      );
+    } finally {
+      setFormsUpdatingId(null);
+    }
+  };
+
   return (
     <div className="relative flex h-auto min-h-screen w-full flex-col max-w-[480px] sm:max-w-[640px] md:max-w-[800px] mx-auto overflow-x-hidden border-x border-gray-200 bg-background-light text-[#1b0d0d]">
       <div className="sticky top-0 z-10 flex items-center bg-background-light/90 backdrop-blur-md p-4 pb-2 justify-between border-b border-gray-100">
@@ -299,6 +403,20 @@ export function StudentDetail() {
 
       <div className="flex items-center gap-4 px-4 min-h-[72px] py-2 border-b border-gray-100">
         <div className="text-[#1b0d0d] flex items-center justify-center rounded-lg bg-gray-100 shrink-0 size-12">
+          <span className="material-symbols-outlined">sell</span>
+        </div>
+        <div className="flex flex-col justify-center">
+          <p className="text-[#1b0d0d] text-base font-medium leading-normal line-clamp-1">
+            Tipo
+          </p>
+          <p className="text-[#9a4c4c] text-sm font-normal leading-normal line-clamp-2">
+            {categoryLabel(student?.category)}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4 px-4 min-h-[72px] py-2 border-b border-gray-100">
+        <div className="text-[#1b0d0d] flex items-center justify-center rounded-lg bg-gray-100 shrink-0 size-12">
           <span className="material-symbols-outlined">phone</span>
         </div>
         <div className="flex flex-col justify-center">
@@ -357,6 +475,23 @@ export function StudentDetail() {
         <div className="px-4 pt-4">
           <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm space-y-3">
             <p className="text-sm font-semibold">Acciones del profesor</p>
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500">Tipo del alumno</label>
+              <select
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                value={categoryValue}
+                onChange={(event) =>
+                  handleUpdateCategory(event.target.value as 'ADULT' | 'CHILD')
+                }
+                disabled={updatingCategory}
+              >
+                <option value="ADULT">Adulto</option>
+                <option value="CHILD">Infantil</option>
+              </select>
+              {updatingCategory && (
+                <p className="text-[11px] text-gray-500">Actualizando...</p>
+              )}
+            </div>
             <div className="flex flex-col gap-2">
               <button
                 className="w-full rounded-lg border border-gray-200 text-sm font-semibold py-2.5 text-[#1b0d0d] disabled:opacity-70"
@@ -401,6 +536,65 @@ export function StudentDetail() {
                 {actionLoading === 'delete' ? 'Eliminando...' : 'Eliminar alumno'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {canManageForms && (
+        <div className="px-4 pt-4">
+          <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-semibold">Formas (desbloqueo manual)</p>
+              {formsLoading && <span className="text-[11px] text-gray-500">Cargando...</span>}
+            </div>
+
+            {!formsLoading && formsAccess.length === 0 && (
+              <p className="text-xs text-gray-500">
+                No hay formas cargadas o todavía no se pudieron cargar.
+              </p>
+            )}
+
+            <div className="flex flex-col gap-2">
+              {formsAccess.map((form) => (
+                <div
+                  key={form.id}
+                  className="flex items-center gap-3 rounded-lg border border-gray-100 bg-background-light px-3 py-2"
+                >
+                  <a
+                    className="flex-1 min-w-0"
+                    href={form.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <p className="text-sm font-semibold truncate">{form.title}</p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">
+                      Orden: {form.order} ·{' '}
+                      {form.unlocked ? 'Desbloqueada' : 'Bloqueada'}
+                    </p>
+                  </a>
+                  <button
+                    className={`shrink-0 rounded-lg text-xs font-semibold px-3 py-2 disabled:opacity-70 ${
+                      form.unlocked
+                        ? 'border border-gray-200 text-[#1b0d0d] bg-white'
+                        : 'bg-primary text-white'
+                    }`}
+                    type="button"
+                    onClick={() => handleToggleForm(form)}
+                    disabled={formsUpdatingId === form.id}
+                  >
+                    {formsUpdatingId === form.id
+                      ? 'Guardando...'
+                      : form.unlocked
+                        ? 'Bloquear'
+                        : 'Desbloquear'}
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-[11px] text-gray-500">
+              El alumno ve solo las formas desbloqueadas en su panel.
+            </p>
           </div>
         </div>
       )}

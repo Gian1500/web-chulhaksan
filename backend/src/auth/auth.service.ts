@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -35,6 +36,27 @@ export class AuthService {
     if (!raw) return '15m';
     if (/^\d+$/.test(raw)) return Number(raw);
     return raw;
+  }
+
+  private ensureRoleAllowedInTestingMode(role: UserRole) {
+    const isTestingMode =
+      (process.env.TESTING_MODE ?? '').toLowerCase() === 'true';
+    if (!isTestingMode) return;
+
+    const allowedRolesRaw =
+      process.env.TESTING_ALLOWED_ROLES ?? 'TEACHER,ADMIN';
+    const allowedRoles = new Set(
+      allowedRolesRaw
+        .split(',')
+        .map((item) => item.trim().toUpperCase())
+        .filter(Boolean),
+    );
+
+    if (!allowedRoles.has(String(role).toUpperCase())) {
+      throw new ForbiddenException(
+        'Sistema en modo prueba. Acceso restringido.',
+      );
+    }
   }
 
   private parseDurationToSeconds(
@@ -92,7 +114,7 @@ export class AuthService {
     const normalizedDni = normalizeDni(dto.dni);
     if (
       dto.role === UserRole.STUDENT &&
-      (!dto.birthDate || !dto.phone || !dto.guardianPhone || !dto.gym)
+      (!dto.birthDate || !dto.phone || !dto.guardianPhone || !dto.gymId)
     ) {
       throw new BadRequestException(
         'Faltan datos obligatorios del alumno.',
@@ -125,6 +147,21 @@ export class AuthService {
       });
 
       if (dto.role === UserRole.STUDENT) {
+        const resolvedGym = dto.gymId
+          ? await tx.gym.findUnique({
+              where: { id: dto.gymId },
+              select: { id: true },
+            })
+          : await tx.gym.findUnique({
+              // Fallback for old register flows / missing data.
+              where: { name: 'Sin gimnasio' },
+              select: { id: true },
+            });
+
+        if (!resolvedGym) {
+          throw new BadRequestException('El gimnasio es inválido.');
+        }
+
         await tx.student.create({
           data: {
             dni: normalizedDni,
@@ -134,7 +171,7 @@ export class AuthService {
             email: dto.email,
             phone: dto.phone,
             guardianPhone: dto.guardianPhone,
-            gym: dto.gym,
+            gymId: resolvedGym.id,
             birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
             address: dto.address,
           },
@@ -182,6 +219,8 @@ export class AuthService {
     if (!isValid) {
       throw new BadRequestException('Credenciales inválidas.');
     }
+
+    this.ensureRoleAllowedInTestingMode(user.role);
 
     const payload = { sub: user.id, dni: user.dni, role: user.role };
     const { accessToken, refreshToken, refreshExpiresAt } =
@@ -235,6 +274,9 @@ export class AuthService {
     if (user.status !== UserStatus.ACTIVE) {
       throw new BadRequestException('Usuario bloqueado o pendiente.');
     }
+
+    this.ensureRoleAllowedInTestingMode(user.role);
+
     if (
       user.refreshTokenExpiresAt &&
       user.refreshTokenExpiresAt.getTime() < Date.now()

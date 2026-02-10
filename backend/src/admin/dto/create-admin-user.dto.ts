@@ -5,10 +5,11 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   Matches,
 } from 'class-validator';
-import { UserRole } from '@prisma/client';
+import { StudentCategory, UserRole } from '@prisma/client';
 
 export class CreateAdminUserDto {
   @IsString()
@@ -48,9 +49,14 @@ export class CreateAdminUserDto {
   guardianPhone?: string;
 
   @IsOptional()
-  @IsString()
-  @Length(2, 80)
-  gym?: string;
+  @IsUUID()
+  gymId?: string;
+
+  @IsOptional()
+  @IsEnum(StudentCategory, {
+    message: 'Selecciona si el alumno es Adulto o Infantil.',
+  })
+  category?: StudentCategory;
 
   @IsOptional()
   @IsDateString()

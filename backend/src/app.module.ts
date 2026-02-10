@@ -13,6 +13,8 @@ import { FeesModule } from './fees/fees.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { AdminModule } from './admin/admin.module';
+import { GymsModule } from './gyms/gyms.module';
+import { FormsModule } from './forms/forms.module';
 
 @Module({
   imports: [
@@ -33,6 +35,8 @@ import { AdminModule } from './admin/admin.module';
     PaymentsModule,
     AttendanceModule,
     AdminModule,
+    GymsModule,
+    FormsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

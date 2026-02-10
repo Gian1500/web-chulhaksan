@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { StudentCategory } from '@prisma/client';
 
 export class PaginationDto {
   @IsOptional()
@@ -18,4 +19,14 @@ export class PaginationDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @IsOptional()
+  @IsUUID()
+  gymId?: string;
+
+  @IsOptional()
+  @IsEnum(StudentCategory, {
+    message: 'La categoria debe ser ADULT o CHILD.',
+  })
+  category?: StudentCategory;
 }

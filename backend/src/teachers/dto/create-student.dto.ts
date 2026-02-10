@@ -1,11 +1,14 @@
 import {
   IsDateString,
   IsEmail,
+  IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   Matches,
 } from 'class-validator';
+import { StudentCategory } from '@prisma/client';
 
 export class CreateStudentDto {
   @IsString()
@@ -41,10 +44,13 @@ export class CreateStudentDto {
   @Length(6, 30)
   guardianPhone?: string;
 
-  @IsOptional()
-  @IsString()
-  @Length(2, 80)
-  gym?: string;
+  @IsUUID()
+  gymId: string;
+
+  @IsEnum(StudentCategory, {
+    message: 'Selecciona si el alumno es Adulto o Infantil.',
+  })
+  category: StudentCategory;
 
   @IsOptional()
   @IsDateString()

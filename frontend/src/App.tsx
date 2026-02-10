@@ -15,6 +15,12 @@ import { AdminStudents } from './AdminStudents';
 import { AdminTeachers } from './AdminTeachers';
 import { ChangePassword } from './ChangePassword';
 import { getProfile } from './auth';
+import { AdminGyms } from './AdminGyms';
+import { TeacherGyms } from './TeacherGyms';
+import { GymAttendance } from './GymAttendance';
+import { MyAttendance } from './MyAttendance';
+import { FormsManager } from './FormsManager';
+import { MyForms } from './MyForms';
 
 function AdminRoute({ children }: { children: JSX.Element }) {
   const profile = getProfile();
@@ -22,6 +28,28 @@ function AdminRoute({ children }: { children: JSX.Element }) {
     return <Navigate to="/login" replace />;
   }
   if (profile.role !== 'ADMIN') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+}
+
+function TeacherRoute({ children }: { children: JSX.Element }) {
+  const profile = getProfile();
+  if (!profile) {
+    return <Navigate to="/login" replace />;
+  }
+  if (profile.role !== 'TEACHER') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+}
+
+function StudentRoute({ children }: { children: JSX.Element }) {
+  const profile = getProfile();
+  if (!profile) {
+    return <Navigate to="/login" replace />;
+  }
+  if (profile.role !== 'STUDENT') {
     return <Navigate to="/dashboard" replace />;
   }
   return children;
@@ -51,9 +79,33 @@ export function App() {
           <Route path="/pagos/qr" element={<PaymentQr />} />
           <Route path="/alumno/:dni" element={<StudentDetail />} />
           <Route path="/profesor/alumnos" element={<TeacherStudents />} />
+          <Route
+            path="/profesor/gimnasios/:gymId/asistencia"
+            element={
+              <TeacherRoute>
+                <GymAttendance />
+              </TeacherRoute>
+            }
+          />
           <Route path="/pagos/exito" element={<PaymentReceiptSuccess />} />
           <Route path="/pagos/error" element={<PaymentReceiptError />} />
           <Route path="/perfil" element={<StudentProfile />} />
+          <Route
+            path="/asistencia"
+            element={
+              <StudentRoute>
+                <MyAttendance />
+              </StudentRoute>
+            }
+          />
+          <Route
+            path="/formas"
+            element={
+              <StudentRoute>
+                <MyForms />
+              </StudentRoute>
+            }
+          />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/recuperar" element={<ForgotPassword />} />
           <Route path="/recuperar/enviado" element={<ForgotPasswordSuccess />} />
@@ -71,6 +123,46 @@ export function App() {
               <AdminRoute>
                 <AdminTeachers />
               </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/gimnasios"
+            element={
+              <AdminRoute>
+                <AdminGyms />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/gimnasios/:gymId/asistencia"
+            element={
+              <AdminRoute>
+                <GymAttendance />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/formas"
+            element={
+              <AdminRoute>
+                <FormsManager />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/profesor/gimnasios"
+            element={
+              <TeacherRoute>
+                <TeacherGyms />
+              </TeacherRoute>
+            }
+          />
+          <Route
+            path="/profesor/formas"
+            element={
+              <TeacherRoute>
+                <FormsManager />
+              </TeacherRoute>
             }
           />
         </Routes>

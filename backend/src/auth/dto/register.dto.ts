@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   Matches,
 } from 'class-validator';
@@ -42,9 +43,8 @@ export class RegisterDto {
   guardianPhone?: string;
 
   @IsOptional()
-  @IsString()
-  @Length(2, 80)
-  gym?: string;
+  @IsUUID()
+  gymId?: string;
 
   @IsOptional()
   @IsDateString()
