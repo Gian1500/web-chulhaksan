@@ -159,20 +159,34 @@ export function FormsManager() {
           onSubmit={handleCreate}
         >
           <p className="text-sm font-bold">Nueva forma</p>
-          <input
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            placeholder="Título (ej: Forma 1 - Taegeuk Il Jang)"
-            value={createEdit.title}
-            onChange={(e) => setCreateEdit((p) => ({ ...p, title: e.target.value }))}
-            disabled={creating}
-          />
-          <input
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            placeholder="URL (YouTube / Drive / etc)"
-            value={createEdit.url}
-            onChange={(e) => setCreateEdit((p) => ({ ...p, url: e.target.value }))}
-            disabled={creating}
-          />
+          <label className="block">
+            <span className="block text-xs font-semibold text-gray-700 mb-1">
+              Título
+            </span>
+            <input
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              placeholder="Ej: Forma 1 - Taegeuk Il Jang"
+              value={createEdit.title}
+              onChange={(e) =>
+                setCreateEdit((p) => ({ ...p, title: e.target.value }))
+              }
+              disabled={creating}
+              required
+            />
+          </label>
+          <label className="block">
+            <span className="block text-xs font-semibold text-gray-700 mb-1">
+              URL
+            </span>
+            <input
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              placeholder="YouTube / Drive / etc"
+              value={createEdit.url}
+              onChange={(e) => setCreateEdit((p) => ({ ...p, url: e.target.value }))}
+              disabled={creating}
+              required
+            />
+          </label>
           <button
             className="w-full rounded-lg bg-primary text-white text-xs font-semibold px-4 py-2 disabled:opacity-70"
             type="submit"
@@ -242,33 +256,52 @@ export function FormsManager() {
       </main>
 
       {editing && (
-        <div className="fixed inset-0 bg-black/40 z-30 flex items-end justify-center">
-          <div className="bg-white w-full max-w-[430px] sm:max-w-[520px] md:max-w-[640px] rounded-t-2xl p-5">
+        <div className="fixed inset-0 bg-black/40 z-30 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white w-full max-w-[430px] sm:max-w-[520px] md:max-w-[640px] rounded-t-2xl sm:rounded-2xl p-5 max-h-[85vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">Editar forma</h2>
               <button
                 className="text-gray-400"
                 type="button"
                 onClick={() => setEditing(null)}
+                aria-label="Cerrar"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
-            <form className="space-y-3" onSubmit={handleSave}>
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Título"
-                value={edit.title}
-                onChange={(e) => setEdit((p) => ({ ...p, title: e.target.value }))}
-                disabled={saving}
-              />
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="URL"
-                value={edit.url}
-                onChange={(e) => setEdit((p) => ({ ...p, url: e.target.value }))}
-                disabled={saving}
-              />
+            <form
+              className="space-y-3 flex-1 overflow-y-auto pr-1 -mr-1"
+              onSubmit={handleSave}
+            >
+              <label className="block">
+                <span className="block text-xs font-semibold text-gray-700 mb-1">
+                  Título
+                </span>
+                <input
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  placeholder="Ej: Forma 1 - Taegeuk Il Jang"
+                  value={edit.title}
+                  onChange={(e) =>
+                    setEdit((p) => ({ ...p, title: e.target.value }))
+                  }
+                  disabled={saving}
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <span className="block text-xs font-semibold text-gray-700 mb-1">
+                  URL
+                </span>
+                <input
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  placeholder="YouTube / Drive / etc"
+                  value={edit.url}
+                  onChange={(e) => setEdit((p) => ({ ...p, url: e.target.value }))}
+                  disabled={saving}
+                  required
+                />
+              </label>
               <button
                 className="w-full rounded-lg bg-primary text-white text-sm font-semibold py-3 disabled:opacity-70"
                 type="submit"
