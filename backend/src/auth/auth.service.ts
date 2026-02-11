@@ -38,25 +38,84 @@ export class AuthService {
     return raw;
   }
 
-  private ensureRoleAllowedInTestingMode(role: UserRole) {
-    const isTestingMode =
-      (process.env.TESTING_MODE ?? '').toLowerCase() === 'true';
-    if (!isTestingMode) return;
+  private isTestingModeEnabled() {
+    return (process.env.TESTING_MODE ?? '').toLowerCase() === 'true';
+  }
 
-    const allowedRolesRaw =
-      process.env.TESTING_ALLOWED_ROLES ?? 'TEACHER,ADMIN';
-    const allowedRoles = new Set(
+  private getTestingAllowedRoles() {
+    const allowedRolesRaw = process.env.TESTING_ALLOWED_ROLES ?? 'TEACHER,ADMIN';
+    return new Set(
       allowedRolesRaw
         .split(',')
         .map((item) => item.trim().toUpperCase())
         .filter(Boolean),
     );
+  }
 
-    if (!allowedRoles.has(String(role).toUpperCase())) {
-      throw new ForbiddenException(
-        'Sistema en modo prueba. Acceso restringido.',
-      );
+  private allowTeacherMirrorStudentsInTestingMode() {
+    return (
+      (process.env.TESTING_ALLOW_TEACHER_MIRROR_STUDENTS ?? '').toLowerCase() ===
+      'true'
+    );
+  }
+
+  private getTeacherMirrorStudentSuffix() {
+    const suffix = (process.env.TESTING_TEACHER_MIRROR_STUDENT_SUFFIX ?? '9')
+      .trim()
+      .replace(/\s+/g, '');
+    return suffix || '9';
+  }
+
+  private getTeacherMirrorBaseDni(studentDni: string) {
+    const dni = normalizeDni(studentDni);
+    const suffix = this.getTeacherMirrorStudentSuffix();
+    if (!dni || !suffix) return null;
+    if (!dni.endsWith(suffix)) return null;
+    const base = dni.slice(0, -suffix.length);
+    if (!base) return null;
+    return base;
+  }
+
+  /**
+   * Testing mode access rule:
+   * - Allow the configured roles (default TEACHER,ADMIN).
+   * - Optionally allow STUDENT accounts that mirror a TEACHER DNI by suffix (e.g. teacher 250... -> student 250...9).
+   */
+  private async ensureTestingModeAccessOrThrow(user: {
+    role: UserRole;
+    dni: string;
+  }) {
+    if (!this.isTestingModeEnabled()) {
+      return { testingAllowMirrorStudent: false };
     }
+
+    const allowedRoles = this.getTestingAllowedRoles();
+    const role = String(user.role ?? '').toUpperCase();
+    if (allowedRoles.has(role)) {
+      return { testingAllowMirrorStudent: false };
+    }
+
+    if (
+      this.allowTeacherMirrorStudentsInTestingMode() &&
+      user.role === UserRole.STUDENT
+    ) {
+      const baseDni = this.getTeacherMirrorBaseDni(user.dni);
+      if (baseDni) {
+        const teacherUser = await this.prisma.user.findUnique({
+          where: { dni: baseDni },
+          select: { id: true, role: true, status: true },
+        });
+        if (
+          teacherUser &&
+          teacherUser.role === UserRole.TEACHER &&
+          teacherUser.status === UserStatus.ACTIVE
+        ) {
+          return { testingAllowMirrorStudent: true };
+        }
+      }
+    }
+
+    throw new ForbiddenException('Sistema en modo prueba. Acceso restringido.');
   }
 
   private parseDurationToSeconds(
@@ -86,6 +145,7 @@ export class AuthService {
     sub: string;
     dni: string;
     role: UserRole;
+    testingAllowMirrorStudent?: boolean;
   }) {
     const accessToken = await this.jwtService.signAsync(payload, {
       expiresIn: this.getAccessExpiresIn() as any,
@@ -220,9 +280,16 @@ export class AuthService {
       throw new BadRequestException('Credenciales inválidas.');
     }
 
-    this.ensureRoleAllowedInTestingMode(user.role);
+    const { testingAllowMirrorStudent } = await this.ensureTestingModeAccessOrThrow(
+      { role: user.role, dni: user.dni },
+    );
 
-    const payload = { sub: user.id, dni: user.dni, role: user.role };
+    const payload = {
+      sub: user.id,
+      dni: user.dni,
+      role: user.role,
+      testingAllowMirrorStudent,
+    };
     const { accessToken, refreshToken, refreshExpiresAt } =
       await this.issueTokens(payload);
     const refreshTokenHash = await hash(refreshToken, 10);
@@ -247,7 +314,12 @@ export class AuthService {
       throw new BadRequestException('Sesión expirada.');
     }
 
-    let payload: { sub: string; dni: string; role: UserRole };
+    let payload: {
+      sub: string;
+      dni: string;
+      role: UserRole;
+      testingAllowMirrorStudent?: boolean;
+    };
     try {
       payload = await this.jwtService.verifyAsync(refreshToken, {
         secret: this.getRefreshSecret(),
@@ -275,7 +347,9 @@ export class AuthService {
       throw new BadRequestException('Usuario bloqueado o pendiente.');
     }
 
-    this.ensureRoleAllowedInTestingMode(user.role);
+    const { testingAllowMirrorStudent } = await this.ensureTestingModeAccessOrThrow(
+      { role: user.role, dni: user.dni },
+    );
 
     if (
       user.refreshTokenExpiresAt &&
@@ -293,6 +367,7 @@ export class AuthService {
         sub: user.id,
         dni: user.dni,
         role: user.role,
+        testingAllowMirrorStudent,
       });
     const refreshTokenHash = await hash(nextRefreshToken, 10);
 

@@ -55,6 +55,12 @@ export class JwtAuthGuard implements CanActivate {
         );
         const role = String(payload?.role ?? '').toUpperCase();
         if (!allowedRoles.has(role)) {
+          const allowMirror =
+            (process.env.TESTING_ALLOW_TEACHER_MIRROR_STUDENTS ?? '').toLowerCase() ===
+            'true';
+          if (allowMirror && payload?.testingAllowMirrorStudent) {
+            return true;
+          }
           throw new ForbiddenException(
             'Sistema en modo prueba. Acceso restringido.',
           );
