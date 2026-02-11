@@ -101,7 +101,11 @@ export function PaymentReceiptSuccess() {
   }, [payment]);
 
   const methodLabel = useMemo(() => {
-    if (!payment?.paymentMethod) return '-';
+    if (!payment) return '-';
+    if (!payment.paymentMethod) {
+      // Pagos en efectivo no tienen mpPaymentId ni método de tarjeta.
+      return payment.mpPaymentId ? '-' : 'Efectivo';
+    }
     if (payment.paymentMethod.type === 'account_money') {
       return 'Saldo en cuenta';
     }
@@ -168,51 +172,51 @@ export function PaymentReceiptSuccess() {
                 <p className="text-sm text-red-600 text-center">{error}</p>
               )}
               <div className="space-y-4">
-                <div className="flex justify-between items-center gap-x-6">
+                <div className="flex justify-between items-start gap-x-6">
                   <p className="text-neutral-500 text-sm font-medium">
                     Estudiante
                   </p>
-                  <p className="text-background-dark text-sm font-semibold text-right">
+                  <p className="text-background-dark text-sm font-semibold text-right flex-1 min-w-0 break-words">
                     {studentName}
                   </p>
                 </div>
-                <div className="flex justify-between items-center gap-x-6">
+                <div className="flex justify-between items-start gap-x-6">
                   <p className="text-neutral-500 text-sm font-medium">DNI</p>
-                  <p className="text-background-dark text-sm font-semibold text-right">
+                  <p className="text-background-dark text-sm font-semibold text-right flex-1 min-w-0 break-words">
                     {payment?.fee.student?.dni ?? '-'}
                   </p>
                 </div>
-                <div className="flex justify-between items-center gap-x-6">
+                <div className="flex justify-between items-start gap-x-6">
                   <p className="text-neutral-500 text-sm font-medium">
                     Mes Pagado
                   </p>
-                  <p className="text-background-dark text-sm font-semibold text-right">
+                  <p className="text-background-dark text-sm font-semibold text-right flex-1 min-w-0 break-words">
                     {monthLabel || '-'}
                   </p>
                 </div>
-                <div className="flex justify-between items-center gap-x-6 pt-2">
+                <div className="flex justify-between items-start gap-x-6 pt-2">
                   <p className="text-neutral-500 text-sm font-medium">
                     ID de Transacción
                   </p>
-                  <p className="text-background-dark text-sm font-mono text-right">
+                  <p className="text-background-dark text-xs font-mono text-right flex-1 min-w-0 break-all">
                     {payment?.mpPaymentId ?? payment?.id ?? '-'}
                   </p>
                 </div>
-                <div className="flex justify-between items-center gap-x-6">
+                <div className="flex justify-between items-start gap-x-6">
                   <p className="text-neutral-500 text-sm font-medium">
                     Fecha y Hora
                   </p>
-                  <p className="text-background-dark text-sm font-semibold text-right">
+                  <p className="text-background-dark text-sm font-semibold text-right flex-1 min-w-0 break-words">
                     {dateLabel}
                   </p>
                 </div>
-                <div className="flex justify-between items-center gap-x-6">
+                <div className="flex justify-between items-start gap-x-6">
                   <p className="text-neutral-500 text-sm font-medium">Método</p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
                     <span className="material-symbols-outlined text-base text-neutral-400">
                       credit_card
                     </span>
-                    <p className="text-background-dark text-sm font-semibold text-right">
+                    <p className="text-background-dark text-sm font-semibold text-right break-words min-w-0">
                       {methodLabel} {methodDetail}
                     </p>
                   </div>

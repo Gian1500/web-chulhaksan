@@ -85,7 +85,7 @@ export function MyForms() {
                   <p className="text-[#1b0d0d] text-base font-semibold leading-tight truncate">
                     {form.title}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">Orden: {form.order}</p>
+                  <p className="text-xs text-gray-500 mt-1 truncate">{form.url}</p>
                 </div>
               </div>
               <span className="material-symbols-outlined text-gray-400">open_in_new</span>
@@ -102,4 +102,3 @@ export function MyForms() {
     </div>
   );
 }
-
