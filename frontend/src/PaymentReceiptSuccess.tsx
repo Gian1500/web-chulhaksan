@@ -44,6 +44,7 @@ const monthNames = [
 export function PaymentReceiptSuccess() {
   const [params] = useSearchParams();
   const externalRef = params.get('external_reference');
+  const mpPaymentIdParam = params.get('payment_id') ?? params.get('collection_id');
   const [payment, setPayment] = useState<PaymentDetails | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -52,15 +53,18 @@ export function PaymentReceiptSuccess() {
   };
 
   useEffect(() => {
-    if (!externalRef) {
-      setError('No se encontró el pago.');
+    if (!externalRef && !mpPaymentIdParam) {
+      setError('No se encontro el pago.');
       setLoading(false);
       return;
     }
 
     const loadPayment = async () => {
       try {
-        const response = await apiFetch(`/payments/${externalRef}`, {
+        const requestPath = externalRef
+          ? `/payments/${externalRef}`
+          : `/payments/mp/${mpPaymentIdParam}`;
+        const response = await apiFetch(requestPath, {
           method: 'GET',
         });
         if (!response.ok) {
@@ -81,7 +85,7 @@ export function PaymentReceiptSuccess() {
     };
 
     loadPayment();
-  }, [externalRef]);
+  }, [externalRef, mpPaymentIdParam]);
 
   const studentName = useMemo(() => {
     if (!payment?.fee.student) return 'Alumno';

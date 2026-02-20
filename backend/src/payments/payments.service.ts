@@ -5,11 +5,21 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { FeeStatus, PaymentStatus, Prisma, UserRole } from '@prisma/client';
-import { MercadoPagoConfig, Payment, Preference } from 'mercadopago';
+import { MercadoPagoConfig, MerchantOrder, Payment, Preference } from 'mercadopago';
 import QRCode from 'qrcode';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
+
+type PaymentWithFeeStudent = Prisma.PaymentGetPayload<{
+  include: {
+    fee: {
+      include: {
+        student: true;
+      };
+    };
+  };
+}>;
 
 @Injectable()
 export class PaymentsService {
@@ -212,13 +222,29 @@ export class PaymentsService {
     return {
       paymentId: payment.paymentId,
       mpPreferenceId: payment.mpPreferenceId,
+      initPoint: payment.initPoint,
       qrDataUrl: dataUrl,
     };
   }
 
   async getPaymentDetails(user: any, paymentId: string) {
-    const payment = await this.prisma.payment.findUnique({
-      where: { id: paymentId },
+    const payment = await this.findPaymentWithFeeStudentById(paymentId);
+    if (!payment) {
+      throw new NotFoundException('Pago no encontrado.');
+    }
+
+    await this.assertCanReadPayment(user, payment);
+    return this.serializePaymentDetails(payment);
+  }
+
+  async getPaymentDetailsByMpPaymentId(user: any, mpPaymentId: string) {
+    const normalizedMpPaymentId = String(mpPaymentId ?? '').trim();
+    if (!normalizedMpPaymentId) {
+      throw new BadRequestException('mpPaymentId es requerido.');
+    }
+
+    const existing = await this.prisma.payment.findUnique({
+      where: { mpPaymentId: normalizedMpPaymentId },
       include: {
         fee: {
           include: { student: true },
@@ -226,25 +252,67 @@ export class PaymentsService {
       },
     });
 
+    if (existing) {
+      await this.assertCanReadPayment(user, existing);
+      return this.serializePaymentDetails(existing);
+    }
+
+    const teacherAccessToken = await this.getTeacherMpAccessTokenForUser(user);
+    const paymentClient = new Payment(this.getMpClient(teacherAccessToken));
+    const mpPayment = await paymentClient.get({ id: normalizedMpPaymentId });
+    const status = this.mapMpStatus(mpPayment.status);
+    const referenceId =
+      mpPayment.metadata?.paymentId ??
+      mpPayment.external_reference ??
+      mpPayment.metadata?.feeId ??
+      null;
+
+    if (!referenceId) {
+      throw new BadRequestException(
+        'No se encontro referencia para conciliar el pago.',
+      );
+    }
+
+    const upserted = await this.upsertPaymentFromWebhook({
+      mpPaymentId: normalizedMpPaymentId,
+      referenceId: String(referenceId),
+      status,
+      raw: mpPayment,
+    });
+
+    const payment = await this.findPaymentWithFeeStudentById(upserted.id);
     if (!payment) {
       throw new NotFoundException('Pago no encontrado.');
     }
 
-    if (
-      user.role === UserRole.STUDENT &&
-      payment.fee.studentDni !== user.dni
-    ) {
+    await this.assertCanReadPayment(user, payment);
+    return this.serializePaymentDetails(payment);
+  }
+
+  private async findPaymentWithFeeStudentById(paymentId: string) {
+    return this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        fee: {
+          include: { student: true },
+        },
+      },
+    });
+  }
+
+  private async assertCanReadPayment(user: any, payment: PaymentWithFeeStudent) {
+    if (user.role === UserRole.STUDENT && payment.fee.studentDni !== user.dni) {
       throw new ForbiddenException('No tienes permisos para este pago.');
     }
+
     if (user.role === UserRole.TEACHER) {
       await this.assertTeacherAssignment(user.sub, payment.fee.studentDni);
     }
+  }
 
+  private serializePaymentDetails(payment: PaymentWithFeeStudent) {
     const paymentMethod = this.extractPaymentMethod(payment.rawResponse);
-    const displayAmount = this.applyLateFee(
-      payment.fee,
-      payment.paidAt ?? undefined,
-    );
+    const displayAmount = this.applyLateFee(payment.fee, payment.paidAt ?? undefined);
     const lateFeeApplied = displayAmount.toString() !== payment.fee.amount.toString();
 
     return {
@@ -272,6 +340,30 @@ export class PaymentsService {
     };
   }
 
+  private async getTeacherMpAccessTokenForUser(user: any) {
+    if (user.role === UserRole.TEACHER) {
+      const teacher = await this.prisma.teacher.findUnique({
+        where: { userId: user.sub },
+        select: { mpAccessToken: true },
+      });
+      if (!teacher?.mpAccessToken) {
+        throw new BadRequestException(
+          'El profesor no tiene Mercado Pago conectado.',
+        );
+      }
+      return teacher.mpAccessToken;
+    }
+
+    if (user.role === UserRole.STUDENT) {
+      const teacher = await this.getTeacherForFee(user.dni);
+      return teacher.mpAccessToken;
+    }
+
+    throw new BadRequestException(
+      'No se puede resolver el pago sin una cuenta vinculada de Mercado Pago.',
+    );
+  }
+
   async handleWebhook(payload: any) {
     return this.handleWebhookWithTeacher(payload);
   }
@@ -288,9 +380,10 @@ export class PaymentsService {
         payload,
       );
       if (!isValid) {
-        throw new BadRequestException('Firma de webhook inválida.');
+        throw new BadRequestException('Firma de webhook invalida.');
       }
     }
+
     const direct = payload?.mpPaymentId && payload?.feeId && payload?.status;
     if (direct) {
       return this.upsertPaymentFromWebhook({
@@ -301,14 +394,52 @@ export class PaymentsService {
       });
     }
 
-    const mpPaymentId = payload?.data?.id ?? payload?.id;
-    if (!mpPaymentId) {
-      throw new BadRequestException('Webhook inválido.');
-    }
-    const resolvedTeacherId = teacherId ?? payload?.teacherId ?? null;
+    const resolvedTeacherId =
+      teacherId ??
+      (typeof context?.query?.teacherId === 'string'
+        ? context.query.teacherId
+        : null) ??
+      payload?.teacherId ??
+      null;
+
     if (!resolvedTeacherId) {
       throw new BadRequestException('teacherId no proporcionado en el webhook.');
     }
+
+    const webhookType = String(
+      payload?.type ??
+        payload?.topic ??
+        context?.query?.type ??
+        context?.query?.topic ??
+        '',
+    )
+      .toLowerCase()
+      .trim();
+
+    if (webhookType.includes('merchant_order')) {
+      const merchantOrderId =
+        payload?.data?.id ??
+        payload?.id ??
+        context?.query?.['data.id'] ??
+        context?.query?.id ??
+        null;
+      if (!merchantOrderId) {
+        throw new BadRequestException(
+          'Webhook merchant_order sin identificador.',
+        );
+      }
+      return this.handleMerchantOrderWebhook(
+        String(merchantOrderId),
+        resolvedTeacherId,
+      );
+    }
+
+    const mpPaymentId =
+      payload?.data?.id ?? payload?.id ?? context?.query?.['data.id'] ?? null;
+    if (!mpPaymentId) {
+      throw new BadRequestException('Webhook invalido.');
+    }
+
     const teacher = await this.prisma.teacher.findUnique({
       where: { id: resolvedTeacherId },
       select: { mpAccessToken: true },
@@ -316,6 +447,7 @@ export class PaymentsService {
     if (!teacher?.mpAccessToken) {
       throw new BadRequestException('Mercado Pago del profesor no configurado.');
     }
+
     const paymentClient = new Payment(this.getMpClient(teacher.mpAccessToken));
     const mpPayment = await paymentClient.get({ id: mpPaymentId });
     const status = this.mapMpStatus(mpPayment.status);
@@ -326,7 +458,7 @@ export class PaymentsService {
       null;
 
     if (!referenceId) {
-      throw new BadRequestException('No se encontró referencia en el pago.');
+      throw new BadRequestException('No se encontro referencia en el pago.');
     }
 
     return this.upsertPaymentFromWebhook({
@@ -335,6 +467,61 @@ export class PaymentsService {
       status,
       raw: mpPayment,
     });
+  }
+
+  private async handleMerchantOrderWebhook(
+    merchantOrderId: string,
+    teacherId: string,
+  ) {
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { id: teacherId },
+      select: { mpAccessToken: true },
+    });
+    if (!teacher?.mpAccessToken) {
+      throw new BadRequestException('Mercado Pago del profesor no configurado.');
+    }
+
+    const mpClient = this.getMpClient(teacher.mpAccessToken);
+    const merchantOrderClient = new MerchantOrder(mpClient);
+    const paymentClient = new Payment(mpClient);
+    const merchantOrder = await merchantOrderClient.get({ merchantOrderId });
+    const merchantPayments = Array.isArray(merchantOrder.payments)
+      ? merchantOrder.payments
+      : [];
+
+    if (merchantPayments.length === 0) {
+      throw new BadRequestException('merchant_order sin pagos asociados.');
+    }
+
+    let latestResult: { id: string } | null = null;
+
+    for (const item of merchantPayments) {
+      const rawPaymentId = item?.id;
+      if (!rawPaymentId) continue;
+
+      const mpPayment = await paymentClient.get({ id: rawPaymentId });
+      const status = this.mapMpStatus(mpPayment.status);
+      const referenceId =
+        mpPayment.metadata?.paymentId ??
+        mpPayment.external_reference ??
+        merchantOrder.external_reference ??
+        mpPayment.metadata?.feeId ??
+        null;
+      if (!referenceId) continue;
+
+      latestResult = await this.upsertPaymentFromWebhook({
+        mpPaymentId: String(rawPaymentId),
+        referenceId: String(referenceId),
+        status,
+        raw: mpPayment,
+      });
+    }
+
+    if (!latestResult) {
+      throw new BadRequestException('No se encontro pago vinculable en merchant_order.');
+    }
+
+    return latestResult;
   }
 
   private async upsertPaymentFromWebhook(input: {

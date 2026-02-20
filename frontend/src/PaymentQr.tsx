@@ -29,6 +29,7 @@ export function PaymentQr() {
   const [params] = useSearchParams();
   const feeId = params.get('feeId');
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const [checkoutUrl, setCheckoutUrl] = useState('');
   const [fee, setFee] = useState<FeeItem | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -62,11 +63,15 @@ export function PaymentQr() {
         }
 
         const fees = (await feesResponse.json()) as FeeItem[];
-        const data = await qrResponse.json();
+        const data = (await qrResponse.json()) as {
+          qrDataUrl?: string;
+          initPoint?: string;
+        };
         const match = fees.find((item) => item.id === feeId) ?? null;
 
         setFee(match);
         setQrDataUrl(data?.qrDataUrl ?? '');
+        setCheckoutUrl(data?.initPoint ?? '');
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'No se pudo generar el QR.';
@@ -124,6 +129,11 @@ export function PaymentQr() {
                 className="w-full h-full object-contain"
               />
             )}
+            {!loading && !error && !qrDataUrl && (
+              <div className="text-sm text-gray-500 text-center">
+                No se pudo renderizar el QR. Usa el boton de apertura directa.
+              </div>
+            )}
           </div>
 
           <div className="mt-8 w-full">
@@ -175,6 +185,17 @@ export function PaymentQr() {
           </div>
 
           <div className="w-full mt-10">
+            {checkoutUrl && (
+              <button
+                className="w-full mb-3 bg-white border border-primary text-primary font-bold py-4 rounded-xl transition-colors shadow-sm flex items-center justify-center"
+                type="button"
+                onClick={() => {
+                  window.location.href = checkoutUrl;
+                }}
+              >
+                Abrir Mercado Pago
+              </button>
+            )}
             <Link
               className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-xl transition-colors shadow-lg shadow-primary/30 flex items-center justify-center"
               to="/pagos"
