@@ -15,6 +15,13 @@ type AttendanceResponse = {
   gym: { id: string; name: string };
   date: string; // YYYY-MM-DD
   summary: { total: number; present: number; absent: number; unmarked: number };
+  monthlyPlan?: {
+    year: number;
+    month: number;
+    classesPlanned: number;
+    recordedClasses: number;
+    remainingClasses: number;
+  };
   students: AttendanceStudent[];
 };
 
@@ -54,6 +61,8 @@ export function GymAttendance() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [planClassesInput, setPlanClassesInput] = useState('8');
+  const [savingPlan, setSavingPlan] = useState(false);
 
   const [presentByDni, setPresentByDni] = useState<Record<string, boolean>>({});
 
@@ -77,6 +86,7 @@ export function GymAttendance() {
       }
       const json = (await res.json()) as AttendanceResponse;
       setData(json);
+      setPlanClassesInput(String(json.monthlyPlan?.classesPlanned ?? 8));
 
       // If the browser gave us a localized value, normalize our state so subsequent saves work.
       if (apiDate !== date) setDate(apiDate);
@@ -154,6 +164,62 @@ export function GymAttendance() {
     }
   };
 
+  const handleSaveMonthlyPlan = async () => {
+    if (!gymId) return;
+    const classesPlanned = Number.parseInt(planClassesInput, 10);
+    if (!Number.isInteger(classesPlanned) || classesPlanned < 1 || classesPlanned > 31) {
+      setError('Ingresa una cantidad valida de clases (1 a 31).');
+      return;
+    }
+
+    const apiDate = normalizeDateInput(date);
+    setSavingPlan(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await apiFetch(
+        `/attendance/gym/${gymId}/plan?date=${encodeURIComponent(apiDate)}`,
+        {
+          method: 'PUT',
+          json: true,
+          body: JSON.stringify({ classesPlanned }),
+        },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message ?? 'No se pudo guardar el plan mensual.');
+      }
+
+      const json = (await res.json()) as {
+        year: number;
+        month: number;
+        classesPlanned: number;
+        recordedClasses: number;
+        remainingClasses: number;
+      };
+
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              monthlyPlan: {
+                year: json.year,
+                month: json.month,
+                classesPlanned: json.classesPlanned,
+                recordedClasses: json.recordedClasses,
+                remainingClasses: json.remainingClasses,
+              },
+            }
+          : current,
+      );
+      setSuccess('Plan mensual actualizado.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo guardar el plan mensual.');
+    } finally {
+      setSavingPlan(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-md border-b border-gray-100">
@@ -220,6 +286,41 @@ export function GymAttendance() {
             >
               Marcar todos presentes
             </button>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-gray-100 bg-background-light p-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-primary font-bold">
+              Clases del mes
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold rounded-full border border-gray-200 bg-white px-2 py-1">
+                Plan: {data?.monthlyPlan?.classesPlanned ?? 8}
+              </span>
+              <span className="text-xs font-semibold rounded-full border border-gray-200 bg-white px-2 py-1">
+                Cargadas: {data?.monthlyPlan?.recordedClasses ?? 0}
+              </span>
+              <span className="text-xs font-semibold rounded-full border border-gray-200 bg-white px-2 py-1">
+                Restantes: {data?.monthlyPlan?.remainingClasses ?? 0}
+              </span>
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                className="w-24 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                type="number"
+                min={1}
+                max={31}
+                value={planClassesInput}
+                onChange={(event) => setPlanClassesInput(event.target.value)}
+              />
+              <button
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-[#1b0d0d] disabled:opacity-70"
+                type="button"
+                onClick={handleSaveMonthlyPlan}
+                disabled={savingPlan || loading}
+              >
+                {savingPlan ? 'Guardando...' : 'Guardar plan'}
+              </button>
+            </div>
           </div>
         </div>
 

@@ -12,6 +12,7 @@ import { UpdateTeacherDto } from '../teachers/dto/update-teacher.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymDto } from './dto/update-gym.dto';
+import { DeleteGymDto } from './dto/delete-gym.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -95,5 +96,10 @@ export class AdminController {
   @Patch('gyms/:id')
   renameGym(@Param('id') id: string, @Body() dto: UpdateGymDto) {
     return this.adminService.renameGym(id, dto);
+  }
+
+  @Delete('gyms/:id')
+  deleteGym(@Param('id') id: string, @Body() dto: DeleteGymDto) {
+    return this.adminService.deleteGym(id, dto);
   }
 }

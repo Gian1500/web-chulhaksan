@@ -22,7 +22,7 @@ export class StudentsService {
 
     // Normalize gym shape for the frontend (string name instead of nested relation object).
     const { gym, ...rest } = student;
-    return { ...rest, gym: gym.name };
+    return { ...rest, gym: gym?.name ?? null };
   }
 
   async getByDniForTeacher(userId: string, dni: string) {
@@ -86,9 +86,11 @@ export class StudentsService {
       throw new NotFoundException('Alumno no encontrado.');
     }
 
+    const hasGymField = Object.prototype.hasOwnProperty.call(dto, 'gymId');
+    const nextGymId = hasGymField ? (dto.gymId ?? null) : undefined;
     const nextGym = dto.gymId
-      ? await this.prisma.gym.findUnique({
-          where: { id: dto.gymId },
+      ? await this.prisma.gym.findFirst({
+          where: { id: dto.gymId, isArchived: false },
           select: { id: true },
         })
       : null;
@@ -104,7 +106,12 @@ export class StudentsService {
         email: dto.email ?? undefined,
         phone: dto.phone ?? undefined,
         guardianPhone: dto.guardianPhone ?? undefined,
-        gymId: nextGym?.id ?? undefined,
+        gymId:
+          nextGymId === undefined
+            ? undefined
+            : nextGymId === null
+              ? null
+              : nextGym?.id,
         address: dto.address ?? undefined,
         birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
       },

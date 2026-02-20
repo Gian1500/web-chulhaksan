@@ -5,6 +5,7 @@ import { apiFetch } from './auth';
 type GymItem = {
   id: string;
   name: string;
+  isArchived: boolean;
   studentsCount: number;
 };
 
@@ -14,7 +15,11 @@ export function AdminGyms() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [name, setName] = useState('');
+  const [query, setQuery] = useState('');
+  const [gymToDelete, setGymToDelete] = useState<GymItem | null>(null);
+  const [targetGymId, setTargetGymId] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -26,7 +31,9 @@ export function AdminGyms() {
         throw new Error(body.message ?? 'No se pudo cargar el listado.');
       }
       const data = (await res.json()) as GymItem[];
-      setGyms(Array.isArray(data) ? data : []);
+      setGyms(
+        Array.isArray(data) ? data.filter((gym) => !gym.isArchived) : [],
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cargar el listado.');
     } finally {
@@ -42,6 +49,13 @@ export function AdminGyms() {
     () => gyms.reduce((acc, gym) => acc + (gym.studentsCount ?? 0), 0),
     [gyms],
   );
+  const activeGymsCount = gyms.length;
+
+  const filteredGyms = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    if (!search) return gyms;
+    return gyms.filter((gym) => gym.name.toLowerCase().includes(search));
+  }, [gyms, query]);
 
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -90,6 +104,46 @@ export function AdminGyms() {
     }
   };
 
+  const openDeleteModal = (gym: GymItem) => {
+    if (gym.isArchived) {
+      setError('Ese gimnasio ya esta archivado.');
+      return;
+    }
+    setGymToDelete(gym);
+    setTargetGymId('');
+    setError('');
+  };
+
+  const closeDeleteModal = () => {
+    setGymToDelete(null);
+    setTargetGymId('');
+  };
+
+  const handleDeleteGym = async () => {
+    if (!gymToDelete || deleting) return;
+    setDeleting(true);
+    setError('');
+    try {
+      const res = await apiFetch(`/admin/gyms/${gymToDelete.id}`, {
+        method: 'DELETE',
+        json: true,
+        body: JSON.stringify(targetGymId ? { targetGymId } : {}),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message ?? 'No se pudo eliminar el gimnasio.');
+      }
+      closeDeleteModal();
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'No se pudo eliminar el gimnasio.',
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto p-4 flex items-center justify-between">
@@ -112,7 +166,7 @@ export function AdminGyms() {
               Totales
             </p>
             <p className="text-sm text-gray-600 mt-1">
-              {gyms.length} gimnasios - {totalStudents} alumnos
+              {activeGymsCount} activos / {gyms.length} totales - {totalStudents} alumnos
             </p>
           </div>
           <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
@@ -140,6 +194,16 @@ export function AdminGyms() {
           </button>
         </form>
 
+        <label className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 flex items-center gap-2">
+          <span className="material-symbols-outlined text-gray-400">search</span>
+          <input
+            className="w-full bg-transparent text-sm outline-none"
+            placeholder="Buscar gimnasio por nombre"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center justify-between">
           <p className="text-sm font-bold">Carpetas</p>
           <Link className="text-xs font-semibold text-primary" to="/admin/alumnos">
@@ -162,9 +226,14 @@ export function AdminGyms() {
             No hay gimnasios para mostrar.
           </div>
         )}
+        {!loading && !error && gyms.length > 0 && filteredGyms.length === 0 && (
+          <div className="bg-white p-4 rounded-xl text-sm text-gray-500 border border-gray-100">
+            No hay resultados para "{query.trim()}".
+          </div>
+        )}
 
         <div className="flex flex-col gap-3">
-          {gyms.map((gym) => (
+          {filteredGyms.map((gym) => (
             <div
               key={gym.id}
               className="flex items-center gap-3 bg-white p-3 rounded-xl justify-between shadow-sm border border-gray-100"
@@ -199,11 +268,69 @@ export function AdminGyms() {
                 >
                   Renombrar
                 </button>
+                <button
+                  className="rounded-lg border border-red-200 text-red-600 text-xs font-semibold px-3 py-2"
+                  type="button"
+                  onClick={() => openDeleteModal(gym)}
+                >
+                  Eliminar
+                </button>
               </div>
             </div>
           ))}
         </div>
       </main>
+
+      {gymToDelete && (
+        <div className="fixed inset-0 z-30 bg-black/40 flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white border border-gray-100 shadow-xl p-5">
+            <h2 className="text-base font-bold text-[#1b0d0d]">
+              Eliminar gimnasio
+            </h2>
+            <p className="text-sm text-gray-600 mt-2">
+              Puedes mover alumnos a otro gimnasio o dejarlos sin asignacion.
+            </p>
+
+            <label className="block mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Mover alumnos a (opcional)
+            </label>
+            <select
+              className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+              value={targetGymId}
+              onChange={(event) => setTargetGymId(event.target.value)}
+              disabled={deleting}
+            >
+              <option value="">Sin asignacion</option>
+              {gyms
+                .filter((gym) => gym.id !== gymToDelete.id && !gym.isArchived)
+                .map((gym) => (
+                  <option key={gym.id} value={gym.id}>
+                    {gym.name}
+                  </option>
+                ))}
+            </select>
+
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                className="rounded-lg border border-gray-200 text-sm font-semibold px-3 py-2"
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={deleting}
+              >
+                Cancelar
+              </button>
+              <button
+                className="rounded-lg bg-red-600 text-white text-sm font-semibold px-3 py-2 disabled:opacity-70"
+                type="button"
+                onClick={handleDeleteGym}
+                disabled={deleting}
+              >
+                {deleting ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

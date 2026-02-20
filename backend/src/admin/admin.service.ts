@@ -16,6 +16,7 @@ import { UpdateStudentDto } from '../students/dto/update-student.dto';
 import { UpdateTeacherDto } from '../teachers/dto/update-teacher.dto';
 import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymDto } from './dto/update-gym.dto';
+import { DeleteGymDto } from './dto/delete-gym.dto';
 import { StudentCategory } from '@prisma/client';
 
 @Injectable()
@@ -24,9 +25,11 @@ export class AdminService {
 
   async listGyms() {
     const gyms = await this.prisma.gym.findMany({
+      where: { isArchived: false },
       select: {
         id: true,
         name: true,
+        isArchived: true,
         _count: { select: { students: true } },
       },
       orderBy: { name: 'asc' },
@@ -35,6 +38,7 @@ export class AdminService {
     return gyms.map((gym) => ({
       id: gym.id,
       name: gym.name,
+      isArchived: gym.isArchived,
       studentsCount: gym._count.students,
     }));
   }
@@ -163,7 +167,10 @@ export class AdminService {
 
       if (dto.role === UserRole.STUDENT) {
         const resolvedGym = gymId
-          ? await tx.gym.findUnique({ where: { id: gymId }, select: { id: true } })
+          ? await tx.gym.findFirst({
+              where: { id: gymId, isArchived: false },
+              select: { id: true },
+            })
           : null;
         if (!resolvedGym) {
           throw new BadRequestException('El gimnasio es inválido.');
@@ -325,7 +332,7 @@ export class AdminService {
     // Normalize gym shape for the frontend (string name instead of nested relation object).
     const normalized = data.map((student) => {
       const { gym, ...rest } = student;
-      return { ...rest, gym: gym.name };
+      return { ...rest, gym: gym?.name ?? null };
     });
 
     return { data: normalized, total, page, limit };
@@ -498,9 +505,11 @@ export class AdminService {
       throw new NotFoundException('Alumno no encontrado.');
     }
 
+    const hasGymField = Object.prototype.hasOwnProperty.call(dto, 'gymId');
+    const nextGymId = hasGymField ? (dto.gymId ?? null) : undefined;
     const nextGym = dto.gymId
-      ? await this.prisma.gym.findUnique({
-          where: { id: dto.gymId },
+      ? await this.prisma.gym.findFirst({
+          where: { id: dto.gymId, isArchived: false },
           select: { id: true },
         })
       : null;
@@ -517,7 +526,12 @@ export class AdminService {
         email: dto.email ?? undefined,
         phone: dto.phone ?? undefined,
         guardianPhone: dto.guardianPhone ?? undefined,
-        gymId: nextGym?.id ?? undefined,
+        gymId:
+          nextGymId === undefined
+            ? undefined
+            : nextGymId === null
+              ? null
+              : nextGym?.id,
         address: dto.address ?? undefined,
         birthDate: dto.birthDate
           ? new Date(dto.birthDate)
@@ -602,4 +616,62 @@ export class AdminService {
       throw err;
     }
   }
+
+  async deleteGym(id: string, dto: DeleteGymDto) {
+    const targetGymId = dto?.targetGymId?.trim();
+
+    if (targetGymId && id === targetGymId) {
+      throw new BadRequestException(
+        'El gimnasio destino debe ser diferente al gimnasio a eliminar.',
+      );
+    }
+
+    const [sourceGym, targetGym] = await Promise.all([
+      this.prisma.gym.findUnique({
+        where: { id },
+        select: { id: true, name: true, isArchived: true },
+      }),
+      targetGymId
+        ? this.prisma.gym.findFirst({
+            where: { id: targetGymId, isArchived: false },
+            select: { id: true, name: true },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    if (!sourceGym) {
+      throw new NotFoundException('Gimnasio no encontrado.');
+    }
+    if (sourceGym.isArchived) {
+      throw new BadRequestException('El gimnasio ya esta archivado.');
+    }
+    if (targetGymId && !targetGym) {
+      throw new NotFoundException('Gimnasio destino no encontrado.');
+    }
+
+    const migrated = await this.prisma.$transaction(async (tx) => {
+      const movedStudents = await tx.student.updateMany({
+        where: { gymId: sourceGym.id },
+        data: { gymId: targetGym?.id ?? null },
+      });
+
+      await tx.gym.update({
+        where: { id: sourceGym.id },
+        data: { isArchived: true },
+      });
+
+      return {
+        students: movedStudents.count,
+      };
+    });
+
+    return {
+      archived: true,
+      sourceGym,
+      targetGym: targetGym ?? null,
+      migratedStudents: migrated.students,
+      unassignedStudents: targetGym ? 0 : migrated.students,
+    };
+  }
+
 }

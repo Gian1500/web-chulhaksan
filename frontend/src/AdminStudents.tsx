@@ -4,7 +4,7 @@ import { apiFetch } from './auth';
 
 type AdminStudent = {
   dni: string;
-  gymId: string;
+  gymId: string | null;
   firstName: string;
   lastName: string;
   category?: 'ADULT' | 'CHILD';
@@ -56,6 +56,7 @@ type CreateStudentForm = StudentForm & {
 type GymOption = {
   id: string;
   name: string;
+  isArchived?: boolean;
 };
 
 const emptyForm: StudentForm = {
@@ -265,9 +266,6 @@ export function AdminStudents() {
     setError('');
     setEditError('');
     try {
-      if (!form.gymId.trim()) {
-        throw new Error('Selecciona un gimnasio.');
-      }
       const response = await apiFetch(`/admin/students/${editing.dni}`, {
         method: 'PATCH',
         json: true,
@@ -522,6 +520,7 @@ export function AdminStudents() {
                 {gyms.map((gym) => (
                   <option key={gym.id} value={gym.id}>
                     {gym.name}
+                    {gym.isArchived ? ' (Archivado)' : ''}
                   </option>
                 ))}
               </select>
@@ -813,14 +812,15 @@ export function AdminStudents() {
                       onChange={(event) =>
                         setForm((prev) => ({ ...prev, gymId: event.target.value }))
                       }
-                      required
                     >
-                      <option value="">Seleccioná un gimnasio</option>
-                      {gyms.map((gym) => (
-                        <option key={gym.id} value={gym.id}>
-                          {gym.name}
-                        </option>
-                      ))}
+                      <option value="">Sin asignacion</option>
+                      {gyms
+                        .filter((gym) => !gym.isArchived)
+                        .map((gym) => (
+                          <option key={gym.id} value={gym.id}>
+                            {gym.name}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 </div>
@@ -1065,11 +1065,13 @@ export function AdminStudents() {
                       required
                     >
                       <option value="">Seleccioná un gimnasio</option>
-                      {gyms.map((gym) => (
+                      {gyms
+                        .filter((gym) => !gym.isArchived)
+                        .map((gym) => (
                         <option key={gym.id} value={gym.id}>
                           {gym.name}
                         </option>
-                      ))}
+                        ))}
                     </select>
                   </div>
                 </div>

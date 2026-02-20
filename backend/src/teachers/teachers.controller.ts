@@ -8,6 +8,7 @@ import { CreateStudentDto } from './dto/create-student.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { UpdateStudentGymDto } from './dto/update-student-gym.dto';
 import { UpdateStudentCategoryDto } from './dto/update-student-category.dto';
+import { UpdateStudentDto } from '../students/dto/update-student.dto';
 
 @Controller('teachers')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -74,6 +75,16 @@ export class TeachersController {
     @Body() dto: UpdateStudentCategoryDto,
   ) {
     return this.teachersService.updateStudentCategory(req['user'].sub, dni, dto);
+  }
+
+  @Patch('me/students/:dni')
+  @Roles(UserRole.TEACHER)
+  updateStudent(
+    @Req() req: Request,
+    @Param('dni') dni: string,
+    @Body() dto: UpdateStudentDto,
+  ) {
+    return this.teachersService.updateStudent(req['user'].sub, dni, dto);
   }
 
   @Delete('me/students/:dni')

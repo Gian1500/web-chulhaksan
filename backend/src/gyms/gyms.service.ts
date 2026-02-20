@@ -7,9 +7,9 @@ export class GymsService {
 
   async list() {
     return this.prisma.gym.findMany({
-      select: { id: true, name: true },
+      where: { isArchived: false },
+      select: { id: true, name: true, isArchived: true },
       orderBy: { name: 'asc' },
     });
   }
 }
-

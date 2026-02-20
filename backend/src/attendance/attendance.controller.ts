@@ -8,6 +8,7 @@ import { MarkAttendanceDto } from './dto/mark-attendance.dto';
 import { AttendanceDateQueryDto } from './dto/attendance-date-query.dto';
 import { SaveGymAttendanceDto } from './dto/save-gym-attendance.dto';
 import { StudentAttendanceQueryDto } from './dto/student-attendance-query.dto';
+import { SetGymMonthlyClassesDto } from './dto/set-gym-monthly-classes.dto';
 
 @Controller('attendance')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -49,6 +50,36 @@ export class AttendanceController {
       { userId: req['user'].sub, role: req['user'].role },
       gymId,
       query.date,
+    );
+  }
+
+  @Get('gym/:gymId/plan')
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  getGymPlan(
+    @Req() req: Request,
+    @Param('gymId') gymId: string,
+    @Query() query: AttendanceDateQueryDto,
+  ) {
+    return this.attendanceService.getGymMonthlyPlan(
+      { userId: req['user'].sub, role: req['user'].role },
+      gymId,
+      query.date,
+    );
+  }
+
+  @Put('gym/:gymId/plan')
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  setGymPlan(
+    @Req() req: Request,
+    @Param('gymId') gymId: string,
+    @Query() query: AttendanceDateQueryDto,
+    @Body() dto: SetGymMonthlyClassesDto,
+  ) {
+    return this.attendanceService.setGymMonthlyPlan(
+      { userId: req['user'].sub, role: req['user'].role },
+      gymId,
+      query.date,
+      dto.classesPlanned,
     );
   }
 

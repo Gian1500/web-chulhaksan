@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -13,8 +13,7 @@ export class GymsController {
   // Used by admin/teacher UIs to populate selects and to navigate by gym.
   @Get()
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  list() {
+  list(@Req() _req: Request) {
     return this.gymsService.list();
   }
 }
-
