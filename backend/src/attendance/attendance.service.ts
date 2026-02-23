@@ -36,6 +36,86 @@ export class AttendanceService {
     return date;
   }
 
+  private getMonthKeyFromDate(date: Date) {
+    return {
+      year: date.getUTCFullYear(),
+      month: date.getUTCMonth() + 1,
+    };
+  }
+
+  private getMonthBounds(year: number, month: number) {
+    const from = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+    const to = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+    return { from, to };
+  }
+
+  private async getTeacherIdOrThrow(userId: string, message: string) {
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (!teacher) {
+      throw new ForbiddenException(message);
+    }
+    return teacher.id;
+  }
+
+  private async assertTeacherCanAccessGym(teacherId: string, gymId: string) {
+    const assignment = await this.prisma.studentTeacherAssignment.findFirst({
+      where: {
+        teacherId,
+        active: true,
+        student: { gymId },
+      },
+      select: { id: true },
+    });
+    if (!assignment) {
+      throw new ForbiddenException(
+        'No tienes permisos para gestionar asistencias en este gimnasio.',
+      );
+    }
+  }
+
+  private async getGymOrThrow(gymId: string) {
+    const gym = await this.prisma.gym.findUnique({
+      where: { id: gymId },
+      select: { id: true, name: true, isArchived: true },
+    });
+    if (!gym) {
+      throw new NotFoundException('Gimnasio no encontrado.');
+    }
+    return gym;
+  }
+
+  private async getMonthlyPlanSummary(gymId: string, date: Date) {
+    const { year, month } = this.getMonthKeyFromDate(date);
+    const { from, to } = this.getMonthBounds(year, month);
+
+    const [plan, recordedRows] = await Promise.all([
+      this.prisma.gymMonthlyClassPlan.findUnique({
+        where: { gymId_year_month: { gymId, year, month } },
+        select: { classesPlanned: true },
+      }),
+      this.prisma.attendance.findMany({
+        where: { gymId, date: { gte: from, lt: to } },
+        select: { date: true },
+        distinct: ['date'],
+      } as any),
+    ]);
+
+    const classesPlanned = plan?.classesPlanned ?? 8;
+    const recordedClasses = recordedRows.length;
+    const remainingClasses = Math.max(0, classesPlanned - recordedClasses);
+
+    return {
+      year,
+      month,
+      classesPlanned,
+      recordedClasses,
+      remainingClasses,
+    };
+  }
+
   async markAttendance(actor: { userId: string; role: UserRole }, dto: MarkAttendanceDto) {
     const student = await this.prisma.student.findUnique({
       where: { dni: dto.studentDni },
@@ -43,6 +123,11 @@ export class AttendanceService {
     });
     if (!student) {
       throw new NotFoundException('Alumno no encontrado.');
+    }
+    if (!student.gymId) {
+      throw new BadRequestException(
+        'El alumno no tiene gimnasio asignado para registrar asistencia.',
+      );
     }
 
     // Teachers can only mark attendance for assigned students.
@@ -137,26 +222,25 @@ export class AttendanceService {
     rawDate: string,
   ) {
     const date = this.parseDateOnly(rawDate);
-
-    const gym = await this.prisma.gym.findUnique({ where: { id: gymId }, select: { id: true, name: true } });
-    if (!gym) {
-      throw new NotFoundException('Gimnasio no encontrado.');
+    const gym = await this.getGymOrThrow(gymId);
+    if (actor.role === UserRole.TEACHER && gym.isArchived) {
+      throw new ForbiddenException(
+        'No puedes tomar asistencia en un gimnasio archivado.',
+      );
     }
 
     let studentWhere: any = { gymId };
 
     if (actor.role === UserRole.TEACHER) {
-      const teacher = await this.prisma.teacher.findUnique({
-        where: { userId: actor.userId },
-        select: { id: true },
-      });
-      if (!teacher) {
-        throw new ForbiddenException('No tenes permisos para ver asistencias.');
-      }
+      const teacherId = await this.getTeacherIdOrThrow(
+        actor.userId,
+        'No tenes permisos para ver asistencias.',
+      );
+      await this.assertTeacherCanAccessGym(teacherId, gymId);
 
       studentWhere = {
         ...studentWhere,
-        assignments: { some: { teacherId: teacher.id, active: true } },
+        assignments: { some: { teacherId, active: true } },
       };
     }
 
@@ -191,6 +275,7 @@ export class AttendanceService {
     const presentCount = data.filter((x) => x.marked && x.present).length;
     const absentCount = data.filter((x) => x.marked && !x.present).length;
     const unmarkedCount = data.filter((x) => !x.marked).length;
+    const monthlyPlan = await this.getMonthlyPlanSummary(gymId, date);
 
     return {
       gym,
@@ -201,7 +286,71 @@ export class AttendanceService {
         absent: absentCount,
         unmarked: unmarkedCount,
       },
+      monthlyPlan,
       students: data,
+    };
+  }
+
+  async getGymMonthlyPlan(
+    actor: { userId: string; role: UserRole },
+    gymId: string,
+    rawDate: string,
+  ) {
+    const date = this.parseDateOnly(rawDate);
+    const gym = await this.getGymOrThrow(gymId);
+    if (actor.role === UserRole.TEACHER) {
+      if (gym.isArchived) {
+        throw new ForbiddenException(
+          'No puedes gestionar plan mensual en un gimnasio archivado.',
+        );
+      }
+      const teacherId = await this.getTeacherIdOrThrow(
+        actor.userId,
+        'No tenes permisos para ver este plan mensual.',
+      );
+      await this.assertTeacherCanAccessGym(teacherId, gymId);
+    }
+
+    const monthlyPlan = await this.getMonthlyPlanSummary(gymId, date);
+    return {
+      gym: { id: gym.id, name: gym.name },
+      ...monthlyPlan,
+    };
+  }
+
+  async setGymMonthlyPlan(
+    actor: { userId: string; role: UserRole },
+    gymId: string,
+    rawDate: string,
+    classesPlanned: number,
+  ) {
+    const date = this.parseDateOnly(rawDate);
+    const gym = await this.getGymOrThrow(gymId);
+    if (gym.isArchived) {
+      throw new BadRequestException(
+        'No puedes configurar plan mensual en un gimnasio archivado.',
+      );
+    }
+
+    if (actor.role === UserRole.TEACHER) {
+      const teacherId = await this.getTeacherIdOrThrow(
+        actor.userId,
+        'No tenes permisos para configurar este plan mensual.',
+      );
+      await this.assertTeacherCanAccessGym(teacherId, gymId);
+    }
+
+    const { year, month } = this.getMonthKeyFromDate(date);
+    await this.prisma.gymMonthlyClassPlan.upsert({
+      where: { gymId_year_month: { gymId, year, month } },
+      update: { classesPlanned },
+      create: { gymId, year, month, classesPlanned },
+    });
+
+    const monthlyPlan = await this.getMonthlyPlanSummary(gymId, date);
+    return {
+      gym: { id: gym.id, name: gym.name },
+      ...monthlyPlan,
     };
   }
 
@@ -212,26 +361,25 @@ export class AttendanceService {
     dto: SaveGymAttendanceDto,
   ) {
     const date = this.parseDateOnly(rawDate);
-
-    const gym = await this.prisma.gym.findUnique({ where: { id: gymId }, select: { id: true } });
-    if (!gym) {
-      throw new NotFoundException('Gimnasio no encontrado.');
+    const gym = await this.getGymOrThrow(gymId);
+    if (actor.role === UserRole.TEACHER && gym.isArchived) {
+      throw new ForbiddenException(
+        'No puedes tomar asistencia en un gimnasio archivado.',
+      );
     }
 
     let studentWhere: any = { gymId };
 
     if (actor.role === UserRole.TEACHER) {
-      const teacher = await this.prisma.teacher.findUnique({
-        where: { userId: actor.userId },
-        select: { id: true },
-      });
-      if (!teacher) {
-        throw new ForbiddenException('No tenes permisos para guardar asistencias.');
-      }
+      const teacherId = await this.getTeacherIdOrThrow(
+        actor.userId,
+        'No tenes permisos para guardar asistencias.',
+      );
+      await this.assertTeacherCanAccessGym(teacherId, gymId);
 
       studentWhere = {
         ...studentWhere,
-        assignments: { some: { teacherId: teacher.id, active: true } },
+        assignments: { some: { teacherId, active: true } },
       };
     }
 

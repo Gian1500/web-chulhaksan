@@ -208,13 +208,13 @@ export class AuthService {
 
       if (dto.role === UserRole.STUDENT) {
         const resolvedGym = dto.gymId
-          ? await tx.gym.findUnique({
-              where: { id: dto.gymId },
+          ? await tx.gym.findFirst({
+              where: { id: dto.gymId, isArchived: false },
               select: { id: true },
             })
-          : await tx.gym.findUnique({
+          : await tx.gym.findFirst({
               // Fallback for old register flows / missing data.
-              where: { name: 'Sin gimnasio' },
+              where: { name: 'Sin gimnasio', isArchived: false },
               select: { id: true },
             });
 

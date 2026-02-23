@@ -25,6 +25,19 @@ export class PaymentsController {
     return this.paymentsService.createQrForFee(req['user'], feeId);
   }
 
+  @Get('mp/:mpPaymentId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT, UserRole.TEACHER, UserRole.ADMIN)
+  getByMpPaymentId(
+    @Req() req: Request,
+    @Param('mpPaymentId') mpPaymentId: string,
+  ) {
+    return this.paymentsService.getPaymentDetailsByMpPaymentId(
+      req['user'],
+      mpPaymentId,
+    );
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.STUDENT, UserRole.TEACHER, UserRole.ADMIN)
