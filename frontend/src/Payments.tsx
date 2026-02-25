@@ -34,6 +34,12 @@ const monthNames = [
   'Diciembre',
 ];
 
+function formatDateAsCalendar(value: string) {
+  return new Date(value).toLocaleDateString('es-AR', {
+    timeZone: 'UTC',
+  });
+}
+
 export function Payments() {
   const [fees, setFees] = useState<FeeItem[]>([]);
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
@@ -220,7 +226,7 @@ export function Payments() {
               ? new Date(fee.paidAt).toLocaleDateString('es-AR')
               : 'Sin fecha';
             const dueLabel = fee.dueDate
-              ? new Date(fee.dueDate).toLocaleDateString('es-AR')
+              ? formatDateAsCalendar(fee.dueDate)
               : '-';
             const approvedPayment =
               fee.payments?.find((payment) => payment.status === 'APPROVED') ??

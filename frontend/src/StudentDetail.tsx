@@ -55,6 +55,12 @@ const monthNames = [
   'Diciembre',
 ];
 
+function formatDateAsCalendar(value: string) {
+  return new Date(value).toLocaleDateString('es-AR', {
+    timeZone: 'UTC',
+  });
+}
+
 export function StudentDetail() {
   const { dni } = useParams();
   const [searchParams] = useSearchParams();
@@ -849,7 +855,7 @@ export function StudentDetail() {
                     {monthLabel} {fee.year}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Vence: {new Date(fee.dueDate).toLocaleDateString('es-AR')}
+                    Vence: {formatDateAsCalendar(fee.dueDate)}
                   </p>
                 </div>
                 <span
