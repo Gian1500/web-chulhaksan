@@ -315,9 +315,6 @@ export function AdminStudents() {
     setError('');
     setCreateError('');
     try {
-      if (!createForm.gymId.trim()) {
-        throw new Error('Selecciona un gimnasio.');
-      }
       const response = await apiFetch('/admin/users', {
         method: 'POST',
         json: true,
@@ -327,11 +324,11 @@ export function AdminStudents() {
             password: createForm.password.trim(),
             firstName: createForm.firstName.trim() || null,
             lastName: createForm.lastName.trim() || null,
-            category: createForm.category,
+            category: createForm.category || null,
             email: createForm.email.trim() || null,
             phone: createForm.phone.trim() || null,
             guardianPhone: createForm.guardianPhone.trim() || null,
-            gymId: createForm.gymId.trim(),
+            gymId: createForm.gymId.trim() || null,
             birthDate: createForm.birthDate.trim() || null,
             address: createForm.address.trim() || null,
           }),
@@ -972,7 +969,7 @@ export function AdminStudents() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Teléfono</label>
+                    <label className="text-xs text-gray-500">Telefono (opcional)</label>
                     <input
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                       placeholder="Ej: 11 2345-6789"
@@ -980,11 +977,10 @@ export function AdminStudents() {
                       onChange={(event) =>
                         setCreateForm((prev) => ({ ...prev, phone: event.target.value }))
                       }
-                      required
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Teléfono tutor</label>
+                    <label className="text-xs text-gray-500">Telefono tutor (opcional)</label>
                     <input
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                       placeholder="Ej: 11 2345-6789"
@@ -995,13 +991,12 @@ export function AdminStudents() {
                           guardianPhone: event.target.value,
                         }))
                       }
-                      required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">Fecha de nacimiento</label>
+                  <label className="text-xs text-gray-500">Fecha de nacimiento (opcional)</label>
                   <div className="relative">
                     <input
                       className="peer w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -1013,7 +1008,6 @@ export function AdminStudents() {
                           birthDate: event.target.value,
                         }))
                       }
-                      required
                     />
                     <div className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] text-gray-500 opacity-0 shadow-sm transition-opacity peer-focus:opacity-100">
                       Seleccioná la fecha de nacimiento
@@ -1038,7 +1032,7 @@ export function AdminStudents() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Tipo</label>
+                    <label className="text-xs text-gray-500">Tipo (opcional)</label>
                     <select
                       className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
                       value={createForm.category}
@@ -1048,23 +1042,21 @@ export function AdminStudents() {
                           category: event.target.value as 'ADULT' | 'CHILD',
                         }))
                       }
-                      required
                     >
                       <option value="ADULT">Adulto</option>
                       <option value="CHILD">Infantil</option>
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Gimnasio</label>
+                    <label className="text-xs text-gray-500">Gimnasio (opcional)</label>
                     <select
                       className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
                       value={createForm.gymId}
                       onChange={(event) =>
                         setCreateForm((prev) => ({ ...prev, gymId: event.target.value }))
                       }
-                      required
                     >
-                      <option value="">Seleccioná un gimnasio</option>
+                      <option value="">Sin asignacion</option>
                       {gyms
                         .filter((gym) => !gym.isArchived)
                         .map((gym) => (
@@ -1077,7 +1069,7 @@ export function AdminStudents() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">Contraseñaa</label>
+                  <label className="text-xs text-gray-500">Contraseña</label>
                   <div className="relative">
                     <input
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm pr-10"
@@ -1096,7 +1088,7 @@ export function AdminStudents() {
                       className="absolute inset-y-0 right-3 flex items-center text-gray-400"
                       type="button"
                       onClick={() => setShowPassword((current) => !current)}
-                      aria-label={showPassword ? 'Ocultar Contraseñaa' : 'Ver Contraseñaa'}
+                      aria-label={showPassword ? 'Ocultar Contraseña' : 'Ver Contraseña'}
                     >
                       <span className="material-symbols-outlined text-lg">
                         {showPassword ? 'visibility_off' : 'visibility'}

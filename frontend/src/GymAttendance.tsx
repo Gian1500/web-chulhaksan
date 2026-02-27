@@ -6,6 +6,7 @@ type AttendanceStudent = {
   dni: string;
   firstName: string;
   lastName: string;
+  category?: 'ADULT' | 'CHILD';
   present: boolean;
   notes: string | null;
   marked: boolean;
@@ -63,6 +64,9 @@ export function GymAttendance() {
   const [success, setSuccess] = useState('');
   const [planClassesInput, setPlanClassesInput] = useState('8');
   const [savingPlan, setSavingPlan] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'ADULT' | 'CHILD'>(
+    'ALL',
+  );
 
   const [presentByDni, setPresentByDni] = useState<Record<string, boolean>>({});
 
@@ -111,23 +115,29 @@ export function GymAttendance() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gymId, date]);
 
-  const summary = useMemo(() => {
+  const filteredStudents = useMemo(() => {
     const students = data?.students ?? [];
+    if (categoryFilter === 'ALL') return students;
+    return students.filter((student) => student.category === categoryFilter);
+  }, [data, categoryFilter]);
+
+  const summary = useMemo(() => {
+    const students = filteredStudents;
     const total = students.length;
     const present = students.filter((s) => presentByDni[s.dni]).length;
     const absent = total - present;
     return { total, present, absent };
-  }, [data, presentByDni]);
+  }, [filteredStudents, presentByDni]);
 
   const handleToggle = (dni: string) => {
     setPresentByDni((current) => ({ ...current, [dni]: !current[dni] }));
   };
 
   const handleMarkAllPresent = () => {
-    const students = data?.students ?? [];
+    const students = filteredStudents;
     const next: Record<string, boolean> = {};
     for (const s of students) next[s.dni] = true;
-    setPresentByDni(next);
+    setPresentByDni((current) => ({ ...current, ...next }));
   };
 
   const handleSave = async () => {
@@ -288,6 +298,43 @@ export function GymAttendance() {
             </button>
           </div>
 
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-gray-600">Filtro:</span>
+            <button
+              type="button"
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                categoryFilter === 'ALL'
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-gray-200 bg-white text-gray-600'
+              }`}
+              onClick={() => setCategoryFilter('ALL')}
+            >
+              Todos
+            </button>
+            <button
+              type="button"
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                categoryFilter === 'ADULT'
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-gray-200 bg-white text-gray-600'
+              }`}
+              onClick={() => setCategoryFilter('ADULT')}
+            >
+              Adultos
+            </button>
+            <button
+              type="button"
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                categoryFilter === 'CHILD'
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-gray-200 bg-white text-gray-600'
+              }`}
+              onClick={() => setCategoryFilter('CHILD')}
+            >
+              Infantiles
+            </button>
+          </div>
+
           <div className="mt-4 rounded-xl border border-gray-100 bg-background-light p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-primary font-bold">
               Clases del mes
@@ -342,14 +389,14 @@ export function GymAttendance() {
           </div>
         )}
 
-        {!loading && !error && data && data.students.length === 0 && (
+        {!loading && !error && data && filteredStudents.length === 0 && (
           <div className="bg-white p-4 rounded-xl text-sm text-gray-500 border border-gray-100">
-            No hay alumnos en este gimnasio.
+            No hay alumnos para el filtro seleccionado.
           </div>
         )}
 
         <div className="flex flex-col gap-3">
-          {(data?.students ?? []).map((s) => {
+          {filteredStudents.map((s) => {
             const isPresent = Boolean(presentByDni[s.dni]);
             return (
               <button

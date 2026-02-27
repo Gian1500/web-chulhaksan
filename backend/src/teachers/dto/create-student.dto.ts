@@ -20,15 +20,13 @@ export class CreateStudentDto {
   @Length(6, 64)
   password: string;
 
-  @IsOptional()
   @IsString()
   @Length(1, 60)
-  firstName?: string;
+  firstName: string;
 
-  @IsOptional()
   @IsString()
   @Length(1, 60)
-  lastName?: string;
+  lastName: string;
 
   @IsOptional()
   @IsEmail()
@@ -44,13 +42,15 @@ export class CreateStudentDto {
   @Length(6, 30)
   guardianPhone?: string;
 
+  @IsOptional()
   @IsUUID()
-  gymId: string;
+  gymId?: string;
 
+  @IsOptional()
   @IsEnum(StudentCategory, {
     message: 'Selecciona si el alumno es Adulto o Infantil.',
   })
-  category: StudentCategory;
+  category?: StudentCategory;
 
   @IsOptional()
   @IsDateString()

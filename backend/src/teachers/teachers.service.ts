@@ -467,25 +467,31 @@ export class TeachersService {
       throw new BadRequestException('El DNI ya esta registrado.');
     }
 
+    const firstName = dto.firstName?.trim();
+    const lastName = dto.lastName?.trim();
+    if (!firstName || !lastName) {
+      throw new BadRequestException('Nombre y apellido son obligatorios.');
+    }
+
     const passwordValue = dto.password.trim();
     const passwordHash = await hash(passwordValue, 10);
-    const firstName = dto.firstName?.trim() || 'Sin nombre';
-    const lastName = dto.lastName?.trim() || 'Sin apellido';
     const email = dto.email?.trim() || null;
     const phone = dto.phone?.trim() || null;
     const guardianPhone = dto.guardianPhone?.trim() || null;
-    const gymId = dto.gymId.trim();
-    const category = dto.category;
+    const gymId = dto.gymId?.trim() || null;
+    const category = dto.category ?? StudentCategory.ADULT;
     const address = dto.address?.trim() || null;
     const birthDateValue = dto.birthDate?.trim();
 
     return this.prisma.$transaction(async (tx) => {
-      const resolvedGym = await tx.gym.findFirst({
-        where: { id: gymId, isArchived: false },
-        select: { id: true },
-      });
-      if (!resolvedGym) {
-        throw new BadRequestException('El gimnasio es inválido.');
+      const resolvedGym = gymId
+        ? await tx.gym.findFirst({
+            where: { id: gymId, isArchived: false },
+            select: { id: true },
+          })
+        : null;
+      if (gymId && !resolvedGym) {
+        throw new BadRequestException('El gimnasio es invalido.');
       }
 
       const user = await tx.user.create({
@@ -508,7 +514,7 @@ export class TeachersService {
           email,
           phone,
           guardianPhone,
-          gymId: resolvedGym.id,
+          gymId: resolvedGym?.id ?? null,
           birthDate: birthDateValue ? new Date(birthDateValue) : undefined,
           address,
         },

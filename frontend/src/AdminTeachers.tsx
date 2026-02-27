@@ -765,11 +765,11 @@ export function AdminTeachers() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">Contraseñaa</label>
+                  <label className="text-xs text-gray-500">Contraseña</label>
                   <div className="relative">
                     <input
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm pr-10"
-                      placeholder="Defin? una Contraseñaa"
+                      placeholder="Defin? una Contraseña"
                       type={showPassword ? 'text' : 'password'}
                       value={createForm.password}
                       onChange={(event) =>
@@ -784,7 +784,7 @@ export function AdminTeachers() {
                       className="absolute inset-y-0 right-3 flex items-center text-gray-400"
                       type="button"
                       onClick={() => setShowPassword((current) => !current)}
-                      aria-label={showPassword ? 'Ocultar Contraseñaa' : 'Ver Contraseñaa'}
+                      aria-label={showPassword ? 'Ocultar Contraseña' : 'Ver Contraseña'}
                     >
                       <span className="material-symbols-outlined text-lg">
                         {showPassword ? 'visibility_off' : 'visibility'}
