@@ -182,12 +182,6 @@ export function TeacherStudents() {
     setError('');
     setCreateError('');
     try {
-      if (!form.gymId.trim()) {
-        throw new Error('Selecciona un gimnasio.');
-      }
-      if (!form.category) {
-        throw new Error('Selecciona si el alumno es Adulto o Infantil.');
-      }
       const response = await apiFetch('/teachers/me/students', {
         method: 'POST',
         json: true,
@@ -199,8 +193,8 @@ export function TeacherStudents() {
           email: form.email.trim() || null,
           phone: form.phone.trim() || null,
           guardianPhone: form.guardianPhone.trim() || null,
-          gymId: form.gymId.trim(),
-          category: form.category,
+          gymId: form.gymId.trim() || null,
+          category: form.category || null,
           birthDate: form.birthDate.trim() || null,
           address: form.address.trim() || null,
         }),
@@ -563,16 +557,15 @@ export function TeacherStudents() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Gimnasio</label>
+                    <label className="text-xs text-gray-500">Gimnasio (opcional)</label>
                     <select
                       className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
                       value={form.gymId}
                       onChange={(event) =>
                         setForm((prev) => ({ ...prev, gymId: event.target.value }))
                       }
-                      required
                     >
-                      <option value="">Seleccioná un gimnasio</option>
+                      <option value="">Sin asignacion</option>
                       {gyms.map((gym) => (
                         <option key={gym.id} value={gym.id}>
                           {gym.name}
@@ -581,7 +574,7 @@ export function TeacherStudents() {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Tipo</label>
+                    <label className="text-xs text-gray-500">Tipo (opcional)</label>
                     <select
                       className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
                       value={form.category}
@@ -591,7 +584,6 @@ export function TeacherStudents() {
                           category: event.target.value as 'ADULT' | 'CHILD',
                         }))
                       }
-                      required
                     >
                       <option value="ADULT">Adulto</option>
                       <option value="CHILD">Infantil</option>
@@ -600,7 +592,7 @@ export function TeacherStudents() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">Fecha de nacimiento</label>
+                  <label className="text-xs text-gray-500">Fecha de nacimiento (opcional)</label>
                   <div className="relative">
                     <input
                       className="peer w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -609,7 +601,6 @@ export function TeacherStudents() {
                       onChange={(event) =>
                         setForm((prev) => ({ ...prev, birthDate: event.target.value }))
                       }
-                      required
                     />
                     <div className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] text-gray-500 opacity-0 shadow-sm transition-opacity peer-focus:opacity-100">
                       Seleccioná la fecha de nacimiento
@@ -631,7 +622,7 @@ export function TeacherStudents() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Teléfono del alumno</label>
+                    <label className="text-xs text-gray-500">Telefono del alumno (opcional)</label>
                     <input
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                       placeholder="Ej: 11 2345-6789"
@@ -639,11 +630,10 @@ export function TeacherStudents() {
                       onChange={(event) =>
                         setForm((prev) => ({ ...prev, phone: event.target.value }))
                       }
-                      required
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Teléfono tutor</label>
+                    <label className="text-xs text-gray-500">Telefono tutor (opcional)</label>
                     <input
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                       placeholder="Ej: 11 2345-6789"
@@ -654,13 +644,12 @@ export function TeacherStudents() {
                           guardianPhone: event.target.value,
                         }))
                       }
-                      required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">Contraseñaa</label>
+                  <label className="text-xs text-gray-500">Contraseña</label>
                   <div className="relative">
                     <input
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm pr-10"
@@ -676,7 +665,7 @@ export function TeacherStudents() {
                       className="absolute inset-y-0 right-3 flex items-center text-gray-400"
                       type="button"
                       onClick={() => setShowPassword((current) => !current)}
-                      aria-label={showPassword ? 'Ocultar Contraseñaa' : 'Ver Contraseñaa'}
+                      aria-label={showPassword ? 'Ocultar Contraseña' : 'Ver Contraseña'}
                     >
                       <span className="material-symbols-outlined text-lg">
                         {showPassword ? 'visibility_off' : 'visibility'}

@@ -124,11 +124,8 @@ export class AdminService {
       }
     }
     if (dto.role === UserRole.STUDENT) {
-      if (!dto.gymId?.trim()) {
-        throw new BadRequestException('El gimnasio es obligatorio.');
-      }
-      if (!dto.category) {
-        throw new BadRequestException('Debes seleccionar si el alumno es Adulto o Infantil.');
+      if (!dto.firstName?.trim() || !dto.lastName?.trim()) {
+        throw new BadRequestException('Nombre y apellido son obligatorios.');
       }
     }
 
@@ -142,10 +139,8 @@ export class AdminService {
     }
 
     const passwordHash = await hash(dto.password, 10);
-    const firstName =
-      dto.firstName?.trim() || (dto.role === UserRole.STUDENT ? 'Sin nombre' : '');
-    const lastName =
-      dto.lastName?.trim() || (dto.role === UserRole.STUDENT ? 'Sin apellido' : '');
+    const firstName = dto.firstName?.trim() || '';
+    const lastName = dto.lastName?.trim() || '';
     const email = dto.email?.trim() || null;
     const phone = dto.phone?.trim() || null;
     const guardianPhone = dto.guardianPhone?.trim() || null;
@@ -172,8 +167,8 @@ export class AdminService {
               select: { id: true },
             })
           : null;
-        if (!resolvedGym) {
-          throw new BadRequestException('El gimnasio es inválido.');
+        if (gymId && !resolvedGym) {
+          throw new BadRequestException('El gimnasio es invalido.');
         }
         await tx.student.create({
           data: {
@@ -185,7 +180,7 @@ export class AdminService {
             email,
             phone,
             guardianPhone,
-            gymId: resolvedGym.id,
+            gymId: resolvedGym?.id ?? null,
             birthDate: birthDateValue ? new Date(birthDateValue) : undefined,
             address,
           },

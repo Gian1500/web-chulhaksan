@@ -36,6 +36,12 @@ type TeacherProfileData = {
   gyms?: string[] | null;
 };
 
+function formatDateAsCalendar(value: string) {
+  return new Date(value).toLocaleDateString('es-AR', {
+    timeZone: 'UTC',
+  });
+}
+
 export function StudentProfile() {
   const [authProfile, setAuthProfile] = useState<AuthProfile | null>(
     getProfile(),
@@ -136,12 +142,12 @@ export function StudentProfile() {
 
   const birthDateLabel = useMemo(() => {
     if (!profile?.birthDate) return '-';
-    return new Date(profile.birthDate).toLocaleDateString('es-AR');
+    return formatDateAsCalendar(profile.birthDate);
   }, [profile]);
 
   const teacherBirthDateLabel = useMemo(() => {
     if (!teacherProfile?.birthDate) return '-';
-    return new Date(teacherProfile.birthDate).toLocaleDateString('es-AR');
+    return formatDateAsCalendar(teacherProfile.birthDate);
   }, [teacherProfile]);
 
   const isTeacher = role === 'TEACHER';

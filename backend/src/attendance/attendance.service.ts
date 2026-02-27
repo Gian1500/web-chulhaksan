@@ -247,7 +247,7 @@ export class AttendanceService {
     const students = await this.prisma.student.findMany({
       where: studentWhere,
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
-      select: { dni: true, firstName: true, lastName: true },
+      select: { dni: true, firstName: true, lastName: true, category: true },
     });
 
     const dnis = students.map((s) => s.dni);
@@ -266,6 +266,7 @@ export class AttendanceService {
         dni: s.dni,
         firstName: s.firstName,
         lastName: s.lastName,
+        category: s.category,
         present: row?.present ?? false,
         notes: row?.notes ?? null,
         marked: Boolean(row),

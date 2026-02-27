@@ -198,7 +198,7 @@ export function StudentDetail() {
 
   const birthDateLabel = useMemo(() => {
     if (!student?.birthDate) return '-';
-    return new Date(student.birthDate).toLocaleDateString('es-AR');
+    return formatDateAsCalendar(student.birthDate);
   }, [student]);
 
   const handleMarkPaid = async (feeId: string) => {
