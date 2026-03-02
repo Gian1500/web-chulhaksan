@@ -27,6 +27,7 @@ export function FormsManager() {
   const [editing, setEditing] = useState<FormLinkItem | null>(null);
   const [edit, setEdit] = useState<FormEdit>(emptyEdit);
   const [saving, setSaving] = useState(false);
+  const [showFormsMenu, setShowFormsMenu] = useState(false);
 
   const title = useMemo(() => 'Formas', []);
 
@@ -196,62 +197,88 @@ export function FormsManager() {
           </button>
         </form>
 
-        {loading && (
-          <div className="bg-white p-4 rounded-xl text-sm text-gray-500 border border-gray-100">
-            Cargando formas...
-          </div>
-        )}
-        {error && (
-          <div className="bg-red-50 p-4 rounded-xl text-sm text-red-600 border border-red-200">
-            {error}
-          </div>
-        )}
-        {!loading && !error && forms.length === 0 && (
-          <div className="bg-white p-4 rounded-xl text-sm text-gray-500 border border-gray-100">
-            Todavía no hay formas cargadas.
-          </div>
-        )}
-
-        <div className="flex flex-col gap-3">
-          {forms.map((form) => (
-            <div
-              key={form.id}
-              className="flex items-center gap-3 bg-white p-3 rounded-xl justify-between shadow-sm border border-gray-100"
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-3"
+            onClick={() => setShowFormsMenu((current) => !current)}
+          >
+            <div className="text-left">
+              <p className="text-sm font-bold">Listado de formas</p>
+              <p className="text-xs text-gray-500">
+                {forms.length} forma{forms.length === 1 ? '' : 's'}
+              </p>
+            </div>
+            <span
+              className={`material-symbols-outlined text-gray-500 transition-transform ${
+                showFormsMenu ? 'rotate-180' : ''
+              }`}
             >
-              <a
-                className="flex items-center gap-3 flex-1 min-w-0"
-                href={form.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <div className="bg-primary/10 text-primary flex items-center justify-center rounded-full h-12 w-12">
-                  <span className="material-symbols-outlined">link</span>
+              expand_more
+            </span>
+          </button>
+
+          {showFormsMenu && (
+            <div className="mt-3 space-y-3">
+              {loading && (
+                <div className="bg-white p-4 rounded-xl text-sm text-gray-500 border border-gray-100">
+                  Cargando formas...
                 </div>
-                <div className="flex flex-col justify-center min-w-0">
-                  <p className="text-[#1b0d0d] text-base font-semibold leading-tight truncate">
-                    {form.title}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1 truncate">{form.url}</p>
+              )}
+              {error && (
+                <div className="bg-red-50 p-4 rounded-xl text-sm text-red-600 border border-red-200">
+                  {error}
                 </div>
-              </a>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  className="rounded-lg bg-primary text-white text-xs font-semibold px-3 py-2"
-                  type="button"
-                  onClick={() => openEdit(form)}
-                >
-                  Editar
-                </button>
-                <button
-                  className="rounded-lg border border-red-200 text-red-600 text-xs font-semibold px-3 py-2"
-                  type="button"
-                  onClick={() => handleDelete(form)}
-                >
-                  Eliminar
-                </button>
+              )}
+              {!loading && !error && forms.length === 0 && (
+                <div className="bg-white p-4 rounded-xl text-sm text-gray-500 border border-gray-100">
+                  Todavia no hay formas cargadas.
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3">
+                {forms.map((form) => (
+                  <div
+                    key={form.id}
+                    className="flex items-center gap-3 bg-white p-3 rounded-xl justify-between shadow-sm border border-gray-100"
+                  >
+                    <a
+                      className="flex items-center gap-3 flex-1 min-w-0"
+                      href={form.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <div className="bg-primary/10 text-primary flex items-center justify-center rounded-full h-12 w-12">
+                        <span className="material-symbols-outlined">link</span>
+                      </div>
+                      <div className="flex flex-col justify-center min-w-0">
+                        <p className="text-[#1b0d0d] text-base font-semibold leading-tight truncate">
+                          {form.title}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1 truncate">{form.url}</p>
+                      </div>
+                    </a>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        className="rounded-lg bg-primary text-white text-xs font-semibold px-3 py-2"
+                        type="button"
+                        onClick={() => openEdit(form)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        className="rounded-lg border border-red-200 text-red-600 text-xs font-semibold px-3 py-2"
+                        type="button"
+                        onClick={() => handleDelete(form)}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          )}
         </div>
       </main>
 

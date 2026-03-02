@@ -91,7 +91,7 @@ export function AdminStudents() {
   );
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const pageSize = 5;
+  const pageSize = 10;
   const [editing, setEditing] = useState<AdminStudent | null>(null);
   const [form, setForm] = useState<StudentForm>(emptyForm);
   const [assignedTeacherId, setAssignedTeacherId] = useState('');
