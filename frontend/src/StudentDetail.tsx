@@ -102,6 +102,7 @@ export function StudentDetail() {
   const [formsAccess, setFormsAccess] = useState<FormAccessItem[]>([]);
   const [formsLoading, setFormsLoading] = useState(false);
   const [formsUpdatingId, setFormsUpdatingId] = useState<string | null>(null);
+  const [showFormsAccessMenu, setShowFormsAccessMenu] = useState(false);
 
   const categoryLabel = (value?: 'ADULT' | 'CHILD') => {
     if (value === 'CHILD') return 'Infantil';
@@ -280,7 +281,7 @@ export function StudentDetail() {
 
   const handleResetPassword = async () => {
     if (!dni) return;
-    if (!confirm('Quieres resetear la contrasena de este alumno?')) return;
+    if (!confirm('Quieres resetear la contraseña de este alumno?')) return;
     setResetting(true);
     setError('');
     try {
@@ -296,7 +297,7 @@ export function StudentDetail() {
       }
       const data = (await response.json()) as { temporaryPassword?: string };
       if (!data?.temporaryPassword) {
-        throw new Error('No se recibio la contrasena temporal.');
+        throw new Error('No se recibio la contraseña temporal.');
       }
       setResetInfo(data.temporaryPassword);
     } catch (err) {
@@ -739,7 +740,7 @@ export function StudentDetail() {
                 disabled={resetting}
               >
                 <span className="material-symbols-outlined text-base">key</span>
-                {resetting ? 'Reseteando...' : 'Resetear contrasena'}
+                {resetting ? 'Reseteando...' : 'Resetear contraseña'}
               </button>
               <button
                 className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-70"
@@ -774,58 +775,81 @@ export function StudentDetail() {
       {canManageForms && (
         <div className="px-4 pt-4">
           <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold">Formas (desbloqueo manual)</p>
-              {formsLoading && <span className="text-[11px] text-gray-500">Cargando...</span>}
-            </div>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-3"
+              onClick={() => setShowFormsAccessMenu((current) => !current)}
+            >
+              <div className="text-left">
+                <p className="text-sm font-semibold">Formas (desbloqueo manual)</p>
+                <p className="text-xs text-gray-500">
+                  {formsAccess.length} forma{formsAccess.length === 1 ? '' : 's'}
+                </p>
+              </div>
+              <span
+                className={`material-symbols-outlined text-gray-500 transition-transform ${
+                  showFormsAccessMenu ? 'rotate-180' : ''
+                }`}
+              >
+                expand_more
+              </span>
+            </button>
 
-            {!formsLoading && formsAccess.length === 0 && (
-              <p className="text-xs text-gray-500">
-                No hay formas cargadas o todavía no se pudieron cargar.
-              </p>
-            )}
+            {showFormsAccessMenu && (
+              <div className="space-y-3">
+                {formsLoading && (
+                  <span className="text-[11px] text-gray-500">Cargando...</span>
+                )}
 
-            <div className="flex flex-col gap-2">
-              {formsAccess.map((form) => (
-                <div
-                  key={form.id}
-                  className="flex items-center gap-3 rounded-lg border border-gray-100 bg-background-light px-3 py-2"
-                >
-                  <a
-                    className="flex-1 min-w-0"
-                    href={form.url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <p className="text-sm font-semibold truncate">{form.title}</p>
-                    <p className="text-[11px] text-gray-500 mt-0.5">
-                      Orden: {form.order} ·{' '}
-                      {form.unlocked ? 'Desbloqueada' : 'Bloqueada'}
-                    </p>
-                  </a>
-                  <button
-                    className={`shrink-0 rounded-lg text-xs font-semibold px-3 py-2 disabled:opacity-70 ${
-                      form.unlocked
-                        ? 'border border-gray-200 text-[#1b0d0d] bg-white'
-                        : 'bg-primary text-white'
-                    }`}
-                    type="button"
-                    onClick={() => handleToggleForm(form)}
-                    disabled={formsUpdatingId === form.id}
-                  >
-                    {formsUpdatingId === form.id
-                      ? 'Guardando...'
-                      : form.unlocked
-                        ? 'Bloquear'
-                        : 'Desbloquear'}
-                  </button>
+                {!formsLoading && formsAccess.length === 0 && (
+                  <p className="text-xs text-gray-500">
+                    No hay formas cargadas o todavía no se pudieron cargar.
+                  </p>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  {formsAccess.map((form) => (
+                    <div
+                      key={form.id}
+                      className="flex items-center gap-3 rounded-lg border border-gray-100 bg-background-light px-3 py-2"
+                    >
+                      <a
+                        className="flex-1 min-w-0"
+                        href={form.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <p className="text-sm font-semibold truncate">{form.title}</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5">
+                          Orden: {form.order} ·{' '}
+                          {form.unlocked ? 'Desbloqueada' : 'Bloqueada'}
+                        </p>
+                      </a>
+                      <button
+                        className={`shrink-0 rounded-lg text-xs font-semibold px-3 py-2 disabled:opacity-70 ${
+                          form.unlocked
+                            ? 'border border-gray-200 text-[#1b0d0d] bg-white'
+                            : 'bg-primary text-white'
+                        }`}
+                        type="button"
+                        onClick={() => handleToggleForm(form)}
+                        disabled={formsUpdatingId === form.id}
+                      >
+                        {formsUpdatingId === form.id
+                          ? 'Guardando...'
+                          : form.unlocked
+                            ? 'Bloquear'
+                            : 'Desbloquear'}
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
 
-            <p className="text-[11px] text-gray-500">
-              El alumno ve solo las formas desbloqueadas en su panel.
-            </p>
+                <p className="text-[11px] text-gray-500">
+                  El alumno ve solo las formas desbloqueadas en su panel.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

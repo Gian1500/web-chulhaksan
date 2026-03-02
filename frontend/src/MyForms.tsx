@@ -14,6 +14,7 @@ export function MyForms() {
   const [forms, setForms] = useState<FormLinkItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showFormsMenu, setShowFormsMenu] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -52,45 +53,71 @@ export function MyForms() {
       </header>
 
       <main className="w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto p-4 pb-24 space-y-4">
-        {loading && (
-          <div className="bg-white p-4 rounded-xl text-sm text-gray-500 border border-gray-100">
-            Cargando formas...
-          </div>
-        )}
-        {error && (
-          <div className="bg-red-50 p-4 rounded-xl text-sm text-red-600 border border-red-200">
-            {error}
-          </div>
-        )}
-        {!loading && !error && forms.length === 0 && (
-          <div className="bg-white p-4 rounded-xl text-sm text-gray-500 border border-gray-100">
-            Todavía no tenés formas desbloqueadas.
-          </div>
-        )}
-
-        <div className="flex flex-col gap-3">
-          {forms.map((form) => (
-            <a
-              key={form.id}
-              href={form.url}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-3 bg-white p-3 rounded-xl justify-between shadow-sm border border-gray-100"
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-3"
+            onClick={() => setShowFormsMenu((current) => !current)}
+          >
+            <div className="text-left">
+              <p className="text-sm font-bold">Mis formas desbloqueadas</p>
+              <p className="text-xs text-gray-500">
+                {forms.length} forma{forms.length === 1 ? '' : 's'}
+              </p>
+            </div>
+            <span
+              className={`material-symbols-outlined text-gray-500 transition-transform ${
+                showFormsMenu ? 'rotate-180' : ''
+              }`}
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="bg-primary/10 text-primary flex items-center justify-center rounded-full h-12 w-12">
-                  <span className="material-symbols-outlined">link</span>
+              expand_more
+            </span>
+          </button>
+
+          {showFormsMenu && (
+            <div className="mt-3 space-y-3">
+              {loading && (
+                <div className="bg-white p-4 rounded-xl text-sm text-gray-500 border border-gray-100">
+                  Cargando formas...
                 </div>
-                <div className="flex flex-col justify-center min-w-0">
-                  <p className="text-[#1b0d0d] text-base font-semibold leading-tight truncate">
-                    {form.title}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1 truncate">{form.url}</p>
+              )}
+              {error && (
+                <div className="bg-red-50 p-4 rounded-xl text-sm text-red-600 border border-red-200">
+                  {error}
                 </div>
+              )}
+              {!loading && !error && forms.length === 0 && (
+                <div className="bg-white p-4 rounded-xl text-sm text-gray-500 border border-gray-100">
+                  Todavia no tenes formas desbloqueadas.
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3">
+                {forms.map((form) => (
+                  <a
+                    key={form.id}
+                    href={form.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-3 bg-white p-3 rounded-xl justify-between shadow-sm border border-gray-100"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="bg-primary/10 text-primary flex items-center justify-center rounded-full h-12 w-12">
+                        <span className="material-symbols-outlined">link</span>
+                      </div>
+                      <div className="flex flex-col justify-center min-w-0">
+                        <p className="text-[#1b0d0d] text-base font-semibold leading-tight truncate">
+                          {form.title}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1 truncate">{form.url}</p>
+                      </div>
+                    </div>
+                    <span className="material-symbols-outlined text-gray-400">open_in_new</span>
+                  </a>
+                ))}
               </div>
-              <span className="material-symbols-outlined text-gray-400">open_in_new</span>
-            </a>
-          ))}
+            </div>
+          )}
         </div>
 
         <div className="pt-2 text-center">

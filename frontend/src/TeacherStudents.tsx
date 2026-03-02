@@ -70,7 +70,7 @@ export function TeacherStudents() {
   const [pageAssigned, setPageAssigned] = useState(
     Math.max(1, Number(searchParams.get('page') ?? '1')),
   );
-  const pageSize = 5;
+  const pageSize = 10;
   const [totalAssigned, setTotalAssigned] = useState(0);
   const assignedCount = totalAssigned;
 

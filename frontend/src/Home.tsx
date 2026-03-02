@@ -1,6 +1,24 @@
 import { Link } from 'react-router-dom';
 
 export function Home() {
+  const socialLinks = [
+    {
+      name: 'WhatsApp',
+      href: 'https://wa.me/5492612793740',
+      icon: 'chat',
+    },
+    {
+      name: 'Facebook',
+      href: 'https://www.facebook.com/share/1DhjYkWfU9/?mibextid=wwXIfr',
+      icon: 'thumb_up',
+    },
+    {
+      name: 'Instagram',
+      href: 'https://www.instagram.com/chulhaksan.mendoza',
+      icon: 'photo_camera',
+    },
+  ];
+
   return (
     <div className="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden pb-10 bg-background-light text-[#1b0d0d] antialiased">
       <header className="sticky top-0 z-50 flex items-center bg-background-light/95 backdrop-blur-md px-4 py-3 justify-between border-b border-gray-200">
@@ -48,7 +66,7 @@ export function Home() {
               </Link>
               <div className="w-20 h-[3px] bg-primary mt-5 rounded-full" />
               <p className="mt-4 text-[11px] uppercase tracking-[0.45em] text-white/70">
-                Disciplina · Respeto · Superación
+                FORMAMOS PERSONAS CAPACES DE ALCANZAR EL ÉXITO Y LA FELICIDAD
               </p>
             </div>
           </div>
@@ -65,9 +83,8 @@ export function Home() {
               <h2 className="text-lg font-bold">Nuestra Visión</h2>
             </div>
             <p className="text-sm text-gray-600 leading-relaxed font-medium">
-              Empoderar líderes: formar individuos capaces de guiar con el
-              ejemplo, inspirando confianza y excelencia en cada aspecto de su
-              vida.
+              • Ser la organizacion N°1 del mundo en la enseñanza de Taekwon-do a todas las personas, sin distinción de sexo, raza, credo, religión y cultura.
+              Mejorando la calidad de vida y elevando el potencial humano, en un espacio cordial, ético y confiable.
             </p>
           </div>
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
@@ -78,9 +95,9 @@ export function Home() {
               <h2 className="text-lg font-bold">Nuestra Misión</h2>
             </div>
             <p className="text-sm text-gray-600 leading-relaxed font-medium">
-              Equipo sólido: consolidar una comunidad de maestros y alumnos
-              comprometidos con la enseñanza técnica superior y el crecimiento
-              mutuo.
+              • Facultar lideres capaces de trascender y hacer trascender a su gente.
+              <br />
+              • Forjar un equipo de trabajo sólido y edicaz basado en la confiabilidad.
             </p>
           </div>
         </div>
@@ -89,15 +106,8 @@ export function Home() {
       <section className="relative py-12 px-4 bg-white overflow-hidden">
         <div className="text-center mb-10 relative z-10">
           <h2 className="text-2xl font-extrabold mb-2 tracking-tight">
-            Principios Fundamentales
+            Principios del Taekwon-Do
           </h2>
-          <div className="flex items-center justify-center gap-2">
-            <span className="h-[1px] w-8 bg-primary/40" />
-            <p className="text-[10px] text-primary font-bold tracking-[0.3em] uppercase">
-              El camino del guerrero
-            </p>
-            <span className="h-[1px] w-8 bg-primary/40" />
-          </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md sm:max-w-lg md:max-w-2xl mx-auto relative z-10">
           <div className="bg-white p-5 rounded-2xl border border-primary/40 shadow-soft-red transition-all duration-300 flex flex-col items-center text-center">
@@ -173,10 +183,6 @@ export function Home() {
                 Filosofía Chul Hak San
               </p>
               <h3 className="mt-2 text-xl font-extrabold">Valores Fundamentales</h3>
-              <p className="mt-2 text-sm text-gray-600">
-                Un mapa visual de principios que guían la disciplina, el
-                respeto y la superación dentro de la escuela.
-              </p>
             </div>
             <div className="w-full rounded-2xl bg-white p-4 shadow-[0_12px_40px_rgba(0,0,0,0.08)]">
               <img
@@ -188,6 +194,38 @@ export function Home() {
           </div>
         </div>
       </section>
+
+      <footer className="mt-auto border-t border-gray-200 bg-[#140909] px-4 py-8 text-white">
+        <div className="mx-auto w-full max-w-md sm:max-w-lg md:max-w-2xl">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary">
+                Chul Hak San
+              </p>
+              <p className="mt-1 text-sm text-white/80">
+                Seguinos en redes sociales
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {socialLinks.map((social) => (
+                <a
+                  key={social.name}
+                  href={social.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={social.name}
+                  title={social.name}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white transition-all hover:-translate-y-0.5 hover:bg-primary hover:text-white"
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    {social.icon}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -161,7 +161,7 @@ export function App() {
             path="/profesor/formas"
             element={
               <TeacherRoute>
-                <FormsManager />
+                <Navigate to="/dashboard" replace />
               </TeacherRoute>
             }
           />
