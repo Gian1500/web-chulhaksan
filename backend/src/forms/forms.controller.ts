@@ -14,25 +14,25 @@ export class FormsController {
   constructor(private readonly formsService: FormsService) {}
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Roles(UserRole.ADMIN)
   listForms() {
     return this.formsService.listForms();
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Roles(UserRole.ADMIN)
   createForm(@Body() dto: CreateFormLinkDto) {
     return this.formsService.createForm(dto);
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Roles(UserRole.ADMIN)
   updateForm(@Param('id') id: string, @Body() dto: UpdateFormLinkDto) {
     return this.formsService.updateForm(id, dto);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Roles(UserRole.ADMIN)
   deleteForm(@Param('id') id: string) {
     return this.formsService.deleteForm(id);
   }
@@ -59,4 +59,3 @@ export class FormsController {
     return this.formsService.setStudentFormAccess(req['user'], dni, dto);
   }
 }
-

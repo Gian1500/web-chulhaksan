@@ -425,15 +425,6 @@ export function Dashboard() {
 
                 <Link
                   className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
-                  to="/profesor/formas"
-                >
-                  <span className="material-symbols-outlined text-primary">link</span>
-                  <span className="text-sm font-semibold">Formas</span>
-                  <span className="text-xs text-gray-500">Links y desbloqueos</span>
-                </Link>
-
-                <Link
-                  className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2 bg-background-light"
                   to="/perfil"
                 >
                   <span className="material-symbols-outlined text-primary">badge</span>
