@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from './auth';
 
@@ -78,37 +78,69 @@ export function Payments() {
       });
   }, [fees]);
 
-  useEffect(() => {
-    const loadFees = async () => {
-      try {
-        const [feesResponse, profileResponse] = await Promise.all([
-          apiFetch('/fees/me', { method: 'GET' }),
-          apiFetch('/students/me', { method: 'GET' }),
-        ]);
-        if (profileResponse.ok) {
-          const profileData = (await profileResponse.json()) as StudentProfile;
-          setStudentProfile(profileData);
-        }
-        const response = feesResponse;
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          throw new Error(body.message ?? 'No se pudieron cargar las cuotas.');
-        }
-        const data = (await response.json()) as FeeItem[];
-        setFees(data ?? []);
-      } catch (err) {
+  const loadFees = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setError('');
+    }
+    try {
+      const response = await apiFetch('/fees/me', {
+        method: 'GET',
+        cache: 'no-store',
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message ?? 'No se pudieron cargar las cuotas.');
+      }
+      const data = (await response.json()) as FeeItem[];
+      setFees(data ?? []);
+      setError('');
+    } catch (err) {
+      if (!silent) {
         const message =
           err instanceof Error
             ? err.message
             : 'No se pudieron cargar las cuotas.';
         setError(message);
-      } finally {
+      }
+    } finally {
+      if (!silent) {
         setLoading(false);
       }
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        const profileResponse = await apiFetch('/students/me', {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        if (profileResponse.ok) {
+          const profileData = (await profileResponse.json()) as StudentProfile;
+          setStudentProfile(profileData);
+        }
+      } catch {
+        setStudentProfile(null);
+      }
+      await loadFees(false);
     };
 
-    loadFees();
-  }, []);
+    void loadInitialData();
+  }, [loadFees]);
+
+  useEffect(() => {
+    if (loading || pendingCount === 0) return;
+    const pollingIntervalMs = 15000;
+    const timer = window.setInterval(() => {
+      if (document.hidden) return;
+      void loadFees(true);
+    }, pollingIntervalMs);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [loadFees, loading, pendingCount]);
 
   const handlePay = async (feeId: string) => {
     setError('');

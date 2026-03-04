@@ -2,8 +2,10 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { FeeStatus, PaymentStatus, Prisma, UserRole } from '@prisma/client';
 import { MercadoPagoConfig, MerchantOrder, Payment, Preference } from 'mercadopago';
 import QRCode from 'qrcode';
@@ -21,9 +23,21 @@ type PaymentWithFeeStudent = Prisma.PaymentGetPayload<{
   };
 }>;
 
+type PendingPaymentForReconcile = Prisma.PaymentGetPayload<{
+  include: {
+    fee: {
+      select: {
+        studentDni: true;
+      };
+    };
+  };
+}>;
+
 @Injectable()
 export class PaymentsService {
   private readonly lateFeeAmount = new Prisma.Decimal(5000);
+  private readonly logger = new Logger(PaymentsService.name);
+  private reconcileInProgress = false;
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -362,6 +376,223 @@ export class PaymentsService {
     throw new BadRequestException(
       'No se puede resolver el pago sin una cuenta vinculada de Mercado Pago.',
     );
+  }
+
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async reconcilePendingPaymentsCron() {
+    const enabled =
+      (process.env.MP_RECONCILE_ENABLED ?? 'true').toLowerCase() !== 'false';
+    if (!enabled) return;
+    await this.reconcilePendingPayments();
+  }
+
+  private async reconcilePendingPayments() {
+    if (this.reconcileInProgress) return;
+    this.reconcileInProgress = true;
+
+    const rawBatch = Number(process.env.MP_RECONCILE_BATCH_SIZE ?? 30);
+    const batchSize = Number.isFinite(rawBatch)
+      ? Math.max(1, Math.min(200, rawBatch))
+      : 30;
+    const rawLookbackHours = Number(process.env.MP_RECONCILE_LOOKBACK_HOURS ?? 720);
+    const lookbackHours =
+      Number.isFinite(rawLookbackHours) && rawLookbackHours > 0
+        ? rawLookbackHours
+        : 720;
+    const createdAfter = new Date(Date.now() - lookbackHours * 60 * 60 * 1000);
+
+    try {
+      const pendingPayments = await this.prisma.payment.findMany({
+        where: {
+          status: PaymentStatus.PENDING,
+          createdAt: { gte: createdAfter },
+          OR: [{ mpPaymentId: { not: null } }, { mpPreferenceId: { not: null } }],
+        },
+        include: {
+          fee: { select: { studentDni: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: batchSize,
+      });
+
+      if (pendingPayments.length === 0) return;
+
+      let approvedCount = 0;
+      for (const pendingPayment of pendingPayments) {
+        try {
+          const approved = await this.reconcileSinglePendingPayment(pendingPayment);
+          if (approved) approvedCount += 1;
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Error desconocido';
+          this.logger.warn(
+            `No se pudo reconciliar pago pendiente ${pendingPayment.id}: ${message}`,
+          );
+        }
+      }
+
+      if (approvedCount > 0) {
+        this.logger.log(
+          `Reconciliacion MP: ${approvedCount} pagos aprobados de ${pendingPayments.length} pendientes revisados.`,
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error desconocido';
+      this.logger.error(`Error en reconciliacion de pagos pendientes: ${message}`);
+    } finally {
+      this.reconcileInProgress = false;
+    }
+  }
+
+  private async reconcileSinglePendingPayment(payment: PendingPaymentForReconcile) {
+    const teacherAccessToken =
+      await this.resolveTeacherAccessTokenForPendingPayment(payment);
+    if (!teacherAccessToken) {
+      return false;
+    }
+
+    let mpPaymentId = payment.mpPaymentId ?? null;
+    let mpRaw: Record<string, unknown> | null = null;
+    let status: PaymentStatus | null = null;
+
+    if (mpPaymentId) {
+      const paymentClient = new Payment(this.getMpClient(teacherAccessToken));
+      const mpPayment = await paymentClient.get({ id: mpPaymentId });
+      mpRaw = this.asRecord(mpPayment);
+      status = this.mapMpStatus(
+        typeof mpPayment.status === 'string' ? mpPayment.status : undefined,
+      );
+    } else {
+      const byExternalReference = await this.findLatestMpPaymentByFilter(
+        teacherAccessToken,
+        'external_reference',
+        payment.id,
+      );
+
+      const byPreferenceId =
+        byExternalReference ??
+        (payment.mpPreferenceId
+          ? await this.findLatestMpPaymentByFilter(
+              teacherAccessToken,
+              'preference_id',
+              payment.mpPreferenceId,
+            )
+          : null);
+
+      if (!byPreferenceId) {
+        return false;
+      }
+
+      mpPaymentId = byPreferenceId.mpPaymentId;
+      status = byPreferenceId.status;
+      mpRaw = byPreferenceId.raw;
+    }
+
+    if (!mpPaymentId || !status) {
+      return false;
+    }
+
+    await this.upsertPaymentFromWebhook({
+      mpPaymentId,
+      referenceId: payment.id,
+      status,
+      raw: mpRaw ?? payment.rawResponse ?? undefined,
+    });
+
+    return status === PaymentStatus.APPROVED;
+  }
+
+  private async resolveTeacherAccessTokenForPendingPayment(
+    payment: PendingPaymentForReconcile,
+  ) {
+    const teacherId = this.extractTeacherIdFromRaw(payment.rawResponse);
+    if (teacherId) {
+      const teacher = await this.prisma.teacher.findUnique({
+        where: { id: teacherId },
+        select: { mpAccessToken: true },
+      });
+      if (teacher?.mpAccessToken) {
+        return teacher.mpAccessToken;
+      }
+    }
+
+    const assignment = await this.prisma.studentTeacherAssignment.findFirst({
+      where: {
+        studentDni: payment.fee.studentDni,
+        active: true,
+      },
+      include: {
+        teacher: { select: { mpAccessToken: true } },
+      },
+    });
+
+    return assignment?.teacher?.mpAccessToken ?? null;
+  }
+
+  private extractTeacherIdFromRaw(raw: unknown) {
+    const root = this.asRecord(raw);
+    if (!root) return null;
+    const metadata = this.asRecord(root.metadata);
+    const teacherId = metadata?.teacherId;
+    return typeof teacherId === 'string' && teacherId.trim()
+      ? teacherId.trim()
+      : null;
+  }
+
+  private async findLatestMpPaymentByFilter(
+    accessToken: string,
+    key: 'external_reference' | 'preference_id',
+    value: string,
+  ) {
+    const query = new URLSearchParams({
+      sort: 'date_created',
+      criteria: 'desc',
+      limit: '1',
+      [key]: value,
+    });
+    const response = await fetch(
+      `https://api.mercadopago.com/v1/payments/search?${query.toString()}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new BadRequestException(
+        `No se pudo consultar pagos en Mercado Pago (${response.status}).`,
+      );
+    }
+
+    const body = (await response.json().catch(() => null)) as
+      | { results?: unknown[] }
+      | null;
+    const first = Array.isArray(body?.results) ? this.asRecord(body.results[0]) : null;
+    if (!first) return null;
+
+    const rawId = first.id;
+    const mpPaymentId =
+      rawId === undefined || rawId === null ? null : String(rawId).trim();
+    if (!mpPaymentId) return null;
+
+    const status = this.mapMpStatus(
+      typeof first.status === 'string' ? first.status : undefined,
+    );
+
+    return {
+      mpPaymentId,
+      status,
+      raw: first,
+    };
+  }
+
+  private asRecord(value: unknown) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return null;
+    }
+    return value as Record<string, any>;
   }
 
   async handleWebhook(payload: any) {
