@@ -22,7 +22,9 @@ export class FeesService {
     paidAt: Date | null;
   }) {
     const referenceDate = fee.paidAt ?? new Date();
-    const isLate = referenceDate > fee.dueDate;
+    const lateFrom = new Date(fee.dueDate);
+    lateFrom.setDate(lateFrom.getDate() + 1);
+    const isLate = referenceDate >= lateFrom;
     if (!isLate) {
       return { amount: fee.amount, lateFeeApplied: false };
     }

@@ -47,7 +47,9 @@ export class PaymentsService {
 
   private applyLateFee(fee: { amount: Prisma.Decimal; dueDate: Date }, referenceDate?: Date) {
     const reference = referenceDate ?? new Date();
-    const isLate = reference > fee.dueDate;
+    const lateFrom = new Date(fee.dueDate);
+    lateFrom.setDate(lateFrom.getDate() + 1);
+    const isLate = reference >= lateFrom;
     if (!isLate) return fee.amount;
     return fee.amount.plus(this.lateFeeAmount);
   }
