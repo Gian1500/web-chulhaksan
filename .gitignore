@@ -31,3 +31,7 @@ stitch_*/
 stitch_proyecto_lau/
 
 docs/
+/scripts/
+/postman/
+/*.csv
+/*.sql

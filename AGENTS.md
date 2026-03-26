@@ -6,7 +6,7 @@
 - Core flows: auth con JWT, asignacion de alumnos a profesor, cuotas mensuales, pagos Mercado Pago y pagos en efectivo.
 - Extras: gimnasios + asistencias por gimnasio + etiquetas Adulto/Infantil + Formas (links) con desbloqueo manual.
 - Deploy: Front en Vercel (`frontend/vercel.json` con rewrite SPA), back en Render.
-- Paginación: server-side en admin y profesor (page/limit/search), 5 ítems por página en UI.
+- Paginacion: server-side en admin y profesor (page/limit/search); alumnos usan 10 items por pagina en UI.
 
 ## Quick commands
 - Frontend dev: `cd frontend; npm install; npm run dev`
@@ -21,6 +21,7 @@
 - Prisma: `backend/package.json` tiene `postinstall: prisma generate` (importante para deploys).
 - MP OAuth: `MP_CLIENT_ID`, `MP_CLIENT_SECRET`, `MP_OAUTH_REDIRECT_URI`, `MP_OAUTH_STATE_SECRET`.
 - MP Webhook: `MP_WEBHOOK_URL` (se usa con `teacherId` en query), `MP_WEBHOOK_SECRET`, `MP_WEBHOOK_TOLERANCE_SEC`.
+- Reconciliacion MP (scheduler): `MP_RECONCILE_ENABLED` (default true), `MP_RECONCILE_BATCH_SIZE` (default 30), `MP_RECONCILE_LOOKBACK_HOURS` (default 720).
 - MP Back URLs: `MP_BACK_URL_SUCCESS`, `MP_BACK_URL_FAILURE`, `MP_BACK_URL_PENDING`.
 - MP Preferencias: `MP_ITEM_CATEGORY_ID`, `MP_ITEM_DESCRIPTION`, `MP_STATEMENT_DESCRIPTOR`.
 - Registro público: `ALLOW_PUBLIC_REGISTER=true` habilita `/auth/register` en producción (por defecto se bloquea).
@@ -37,6 +38,7 @@
 - Alta de alumno (admin/profe): crea tambien la cuota del mes actual; si el alta es despues del dia 10, esa cuota usa `dueDate` fin de mes (sin recargo ese mes).
 - Profesores solo pueden ver/alinear alumnos no asignados; no pueden reasignar alumnos de otros profesores.
 - Profesores pueden marcar cuota como pagada en efectivo (genera `Payment` aprobado).
+- Formas: solo `ADMIN` puede crear/editar/eliminar; `TEACHER` solo habilita/bloquea formas para sus alumnos asignados.
 - Asistencia/solicitudes estan ocultas en frontend (endpoints quedan para futuro).
 - Cambio de contraseña obligatorio: `User.mustChangePassword` + pantalla `/cambiar-contrasena`.
 - Email y dirección son opcionales en altas/ediciones (admin/profesor).
@@ -60,7 +62,9 @@
 - Comprobante: `frontend/src/PaymentReceiptSuccess.tsx` (descarga vía `window.print()`).
 - Home: `frontend/src/Home.tsx`
 - Paginación UI: `frontend/src/AdminStudents.tsx`, `frontend/src/AdminTeachers.tsx`, `frontend/src/TeacherStudents.tsx`
-- Formas: `frontend/src/FormsManager.tsx` (admin/teacher), `frontend/src/MyForms.tsx` (alumno), desbloqueo por alumno en `frontend/src/StudentDetail.tsx`
+- Formas: `frontend/src/FormsManager.tsx` (solo admin), `frontend/src/MyForms.tsx` (alumno), desbloqueo por alumno en `frontend/src/StudentDetail.tsx` (admin+teacher)
+- `/profesor/formas`: redirige a `/dashboard` (profesor sin pantalla de gestion de formas)
+- Pagos alumno: polling cada 15s en `frontend/src/Payments.tsx` cuando hay cuotas pendientes y la pestana esta visible
 - Asistencia por gimnasio (admin+teacher): `frontend/src/GymAttendance.tsx`
 - Asistencia alumno (read-only): `frontend/src/MyAttendance.tsx`
 
@@ -75,8 +79,10 @@
 - Prisma schema: `backend/prisma/schema.prisma`
 - Paginación API: `backend/src/admin/admin.service.ts`, `backend/src/teachers/teachers.service.ts`
 - Formas API: `backend/src/forms/*` (`/forms`, `/forms/me`, `/forms/student/:dni`, `/forms/student/:dni/access`)
+- Formas permisos: `/forms` CRUD solo `ADMIN`; `/forms/student/:dni` y `/forms/student/:dni/access` para `ADMIN` + `TEACHER` (teacher solo sobre alumnos asignados)
 - Gyms API: `GET /gyms`, `POST /admin/gyms`, `PATCH /admin/gyms/:id`, `PATCH /teachers/me/students/:dni/gym`
 - Attendance API: `backend/src/attendance/*`
+- Pagos reconciliacion: cron en `backend/src/payments/payments.service.ts` para conciliar `PENDING` contra Mercado Pago
 
 ## Attendance API (nuevo)
 - `GET /attendance/gym/:gymId?date=YYYY-MM-DD` (ADMIN/TEACHER) lista alumnos del gimnasio + estado del dia
